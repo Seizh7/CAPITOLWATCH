@@ -25,10 +25,12 @@ DEALINGS IN THE SOFTWARE.
 from pathlib import Path
 
 # Path to the root of the project
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve()
 
-# Path to data directory
+# Path to directories
 DATA_DIR = PROJECT_ROOT / "data"
+SOURCE_DIR = PROJECT_ROOT / "capitolwatch"
+SCRAPING_DIR = SOURCE_DIR / "scraping"
 
 # Target and searching year for the reports
 YEAR = "2023"
