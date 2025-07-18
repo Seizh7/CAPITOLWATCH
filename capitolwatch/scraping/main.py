@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from capitolwatch.scraping.driver import setup_driver
 from capitolwatch.scraping.scraper import submit_search_form, get_all_links
 from capitolwatch.scraping.downloader import download_report
-from capitolwatch.scraping.config import START_DATE, END_DATE, YEAR, OUTPUT_FOLDER
+from config import START_DATE, END_DATE, YEAR, OUTPUT_FOLDER
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
