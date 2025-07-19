@@ -24,25 +24,33 @@ DEALINGS IN THE SOFTWARE.
 
 from pathlib import Path
 
-# Path to the root of the project
-PROJECT_ROOT = Path(__file__).resolve().parent
+class Config:
+    def __init__(self, year="2023"):
+        # Root of the project (this file is at the project root)
+        self.project_root = Path(__file__).resolve().parent
 
-# Path to directories
-DATA_DIR = PROJECT_ROOT / "data"
-SOURCE_DIR = PROJECT_ROOT / "capitolwatch"
-SCRAPING_DIR = SOURCE_DIR / "scraping"
+        # Data and results directories
+        self.data_dir = self.project_root / "data"
+        self.source_dir = self.project_root / "capitolwatch"
+        self.scraping_dir = self.source_dir / "scraping"
 
-# Target and searching year for the reports
-YEAR = "2023"
-SEARCH_YEAR = str(int(YEAR) + 1)
+        # Target and searching year for the reports
+        self.year = year
+        self.search_year = str(int(self.year) + 1)
 
-# Output folder for saving the annual reports
-OUTPUT_FOLDER = DATA_DIR / f"annual_reports_{YEAR}"
+        # Output folder for saving the annual reports
+        self.output_folder = self.data_dir / f"annual_reports_{self.year}"
 
-# Search period for collecting the reports
-START_DATE = f"01/01/{SEARCH_YEAR}"
-END_DATE = f"12/31/{SEARCH_YEAR}"
+        # Search period for collecting the reports
+        self.start_date = f"01/01/{self.search_year}"
+        self.end_date = f"12/31/{self.search_year}"
 
-# Base URL for the US Senate EFD search
-BASE_URL = "https://efdsearch.senate.gov"
-SEARCH_URL = BASE_URL + "/search/"
+        # Base URL for the US Senate EFD search
+        self.base_url = "https://efdsearch.senate.gov"
+        self.search_url = self.base_url + "/search/"
+
+        # Path to the database
+        self.db_path = self.data_dir / "capitolwatch.db"
+
+# Instance to be imported everywhere
+CONFIG = Config()
