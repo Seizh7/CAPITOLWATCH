@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from pathlib import Path
 
 # Path to the root of the project
-PROJECT_ROOT = Path(__file__).resolve()
+PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Path to directories
 DATA_DIR = PROJECT_ROOT / "data"
