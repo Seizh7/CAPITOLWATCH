@@ -84,9 +84,11 @@ CREATE TABLE IF NOT EXISTS assets (
     income_type TEXT,
     income TEXT,
     comment TEXT,
+    parent_asset_id INTEGER,
     FOREIGN KEY (report_id) REFERENCES reports(id),
     FOREIGN KEY (politician_id) REFERENCES politicians(id),
-    FOREIGN KEY (product_id) REFERENCES products(id)
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (parent_asset_id) REFERENCES assets(id)
 )
 """)
 
