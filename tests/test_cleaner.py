@@ -23,69 +23,21 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from capitolwatch.parsing.cleaner import clean_html_string
+import pathlib
 
-def test_clean_html_realistic_senate_report_anonymized():
-    html = """
-    <html>
-      <head><title>eFD: Annual Report for 2023 - Dupont, Pierre X</title></head>
-      <body>
-        <h2 class="filedReport">
-            The Honorable
-            Pierre
-            X
-            Dupont
-            (Dupont, Pierre X.)
-        </h2>
-        <section class="card mb-2">
-            <div class="card-body">
-                <h3 class="h4">Part 3. Assets</h3>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Asset</th>
-                                <th>Asset Type</th>
-                                <th>Owner</th>
-                                <th>Value</th>
-                                <th>Income Type</th>
-                                <th>Income</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><strong>Bank A</strong><div class="muted noWrap">(City, ST)</div></td>
-                                <td>Bank Deposit</td>
-                                <td>Joint</td>
-                                <td>$10,001 - $50,000</td>
-                                <td>Interest, </td>
-                                <td>None (or less than $201)</td>
-                            </tr>
-                            <tr>
-                                <td><strong>Main Residence</strong></td>
-                                <td>Real Estate</td>
-                                <td>Joint</td>
-                                <td>$500,001 - $1,000,000</td>
-                                <td>Rent/Royalties, </td>
-                                <td>$5,001 - $15,000</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-      </body>
-    </html>
-    """
+def test_clean_html():
+    with open(pathlib.Path(__file__).parent / "test.html", "r") as f:
+        html = f.read()
     cleaned = clean_html_string(html)
     # Check for essential information in the cleaned text (anonymized)
-    assert "Pierre" in cleaned
-    assert "Dupont" in cleaned
-    assert "Bank A" in cleaned
-    assert "Main Residence" in cleaned
-    assert "Bank Deposit" in cleaned
-    assert "$500,001 - $1,000,000" in cleaned
-    assert "Interest" in cleaned
-    assert "Rent/Royalties" in cleaned
+    assert "Jean M" in cleaned
+    assert "DUPONT" in cleaned
+    assert "Hammond Hardware Company" in cleaned
+    assert "Corporate Securities" in cleaned
+    assert "Self" in cleaned
+    assert "$1,000,001 - $5,000,000" in cleaned
+    assert "Dividends" in cleaned
+    assert "None" in cleaned
 
     # Negative controls: removed HTML tags and classes
     assert "<div" not in cleaned
