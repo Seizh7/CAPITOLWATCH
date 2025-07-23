@@ -23,7 +23,6 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from pathlib import Path
-from dotenv import load_dotenv
 import os
 
 class Config:
