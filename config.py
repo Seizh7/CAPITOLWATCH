@@ -23,6 +23,8 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 class Config:
     def __init__(self, year="2023"):
@@ -51,6 +53,11 @@ class Config:
 
         # Path to the database
         self.db_path = self.data_dir / "capitolwatch.db"
+
+        # Load environment variables from .env file
+        self.api_key = os.getenv("CONGRESS_API_KEY")
+        if not self.api_key:
+            raise ValueError("Missing CONGRESS_API_KEY in .env")
 
 # Instance to be imported everywhere
 CONFIG = Config()
