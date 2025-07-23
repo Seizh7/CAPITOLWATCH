@@ -24,13 +24,10 @@ DEALINGS IN THE SOFTWARE.
 
 import sqlite3
 from pathlib import Path
-
-# Define database path
-db_path = Path("data/capitolwatch.db")
-db_path.parent.mkdir(parents=True, exist_ok=True)
+from config import CONFIG
 
 # Connect to the SQLite database
-conn = sqlite3.connect(db_path)
+conn = sqlite3.connect(CONFIG.db_path)
 cur = conn.cursor()
 
 # Enable foreign key constraint enforcement in SQLite
@@ -92,6 +89,6 @@ CREATE TABLE IF NOT EXISTS assets (
 )
 """)
 
-print(f"Database initialized at {db_path.absolute()}")
+print(f"Database initialized at {CONFIG.db_path.absolute()}")
 conn.commit()
 conn.close()
