@@ -23,7 +23,6 @@ DEALINGS IN THE SOFTWARE.
 """
 
 import sqlite3
-from pathlib import Path
 from config import CONFIG
 
 # Connect to the SQLite database
