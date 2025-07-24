@@ -23,7 +23,9 @@ DEALINGS IN THE SOFTWARE.
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 import os
+
 
 class Config:
     def __init__(self, year="2023"):
@@ -58,5 +60,5 @@ class Config:
         if not self.api_key:
             raise ValueError("Missing CONGRESS_API_KEY in .env")
 
-# Instance to be imported everywhere
+load_dotenv()
 CONFIG = Config()
