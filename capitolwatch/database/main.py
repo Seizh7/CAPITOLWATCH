@@ -22,8 +22,9 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from capitolwatch.database.init_db import initialize_database
 from config import CONFIG
+from capitolwatch.database.init_db import initialize_database
+import capitolwatch.database.extract_senators as es
 
 
 def main():
@@ -31,6 +32,12 @@ def main():
     Initializes the database for the application.
     """
     initialize_database(CONFIG)
+
+    senators = es.get_current_senators(CONFIG)
+    print(f"Total senators found: {len(senators)}")
+
+    es.add_senators_to_db(senators, CONFIG)
+    print("Senators have been added to the database.")
 
 
 if __name__ == "__main__":
