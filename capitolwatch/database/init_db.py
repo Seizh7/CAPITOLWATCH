@@ -35,10 +35,10 @@ cur.execute("PRAGMA foreign_keys = ON;")
 # Table: politicians
 cur.execute("""
 CREATE TABLE IF NOT EXISTS politicians (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id VARCHAR(7) PRIMARY KEY,
     last_name TEXT,
     first_name TEXT,
-    political_group TEXT
+    party TEXT
 )
 """)
 
