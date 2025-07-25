@@ -21,16 +21,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 import requests
-from config import CONFIG
 import sqlite3
 
-def get_current_senators():
+
+def get_current_senators(config):
     """
     Get all the current US senators from the Congress.gov API.
 
     Returns:
-        list of dict: Each dictionary contains 'first_name', 'last_name', 'bioguide_id', and 'party'.
+        list of dict: Each dictionary contains 'first_name', 'last_name',
+        'bioguide_id', and 'party'.
     """
     senators = []
     offset = 0
@@ -40,7 +42,7 @@ def get_current_senators():
         # Build the API request URL and parameters
         url = "https://api.congress.gov/v3/member"
         parameters = {
-            "api_key": CONFIG.api_key,
+            "api_key": config.api_key,
             "format": "json",
             "currentMember": "true",
             "limit": limit,
@@ -64,7 +66,8 @@ def get_current_senators():
                     continue
 
                 # Check if the member is a senator
-                is_senator = any(term.get("chamber") == "Senate" for term in terms)
+                is_senator = any(term.get("chamber") == "Senate"
+                                 for term in terms)
                 if not is_senator:
                     continue
 
@@ -74,7 +77,8 @@ def get_current_senators():
 
                 # Split name into last and first names if comma present
                 if "," in full_name:
-                    last_name, first_names = map(str.strip, full_name.split(",", 1))
+                    last_name, first_names = map(str.strip,
+                                                 full_name.split(",", 1))
                 else:
                     last_name = ""
                     first_names = full_name
@@ -94,20 +98,22 @@ def get_current_senators():
 
     return senators
 
-def add_senators_to_db(senators):
+
+def add_senators_to_db(senators, config):
     """
     Inserts the list of senators into the 'politicians' table in the database.
 
     Args:
         senators (list of dict): List of senator information to insert.
     """
-    conn = sqlite3.connect(CONFIG.db_path)
+    conn = sqlite3.connect(config.db_path)
     cur = conn.cursor()
 
     for senator in senators:
         # Insert the senator if not already present
         cur.execute("""
-            INSERT OR IGNORE INTO politicians (first_name, last_name, party, ID)
+            INSERT OR IGNORE INTO politicians (first_name, last_name, party,
+                    ID)
             VALUES (?, ?, ?, ?)
         """, (
             senator["first_name"],
