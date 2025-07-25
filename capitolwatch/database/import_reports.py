@@ -21,14 +21,17 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
+
 import hashlib
 import sqlite3
 from config import CONFIG
 from datetime import datetime, timezone
 
+
 def import_reports(folder_path, db_path, project_root):
     """
-    Imports HTML report files from a folder and saves their metadata in the database (reports table).
+    Imports HTML report files from a folder and saves their metadata in the
+    database (reports table).
 
     Args:
         folder_path (str or Path): Directory containing .html files
@@ -59,7 +62,8 @@ def import_reports(folder_path, db_path, project_root):
             # Update the existing report record with new metadata
             cur.execute("""
                 UPDATE reports
-                SET checksum = ?, source_file = ?, encoding = ?, import_timestamp = ?
+                SET checksum = ?, source_file = ?, encoding = ?,
+                        import_timestamp = ?
                 WHERE id = ?
             """, (
                 checksum,
@@ -72,7 +76,8 @@ def import_reports(folder_path, db_path, project_root):
         else:
             # Insert a new report record
             cur.execute("""
-                INSERT INTO reports (id, url, import_timestamp, checksum, encoding, source_file)
+                INSERT INTO reports (id, url, import_timestamp, checksum,
+                        encoding, source_file)
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 report_id,
@@ -87,6 +92,7 @@ def import_reports(folder_path, db_path, project_root):
     conn.commit()
     conn.close()
     print("Import finished.")
+
 
 if __name__ == "__main__":
     import_reports(
