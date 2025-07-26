@@ -22,6 +22,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 import re
+from capitolwatch.database.extract_senators import normalize_name
+
 
 def extract_politician_name(soup):
     """
@@ -37,24 +39,24 @@ def extract_politician_name(soup):
     title = soup.title
     if not title or not title.text:
         return "", ""
-    
+
     # Split the title text by hyphen ('-')
     parts = title.text.split('-')
     if len(parts) < 2:
         return "", ""
-    
+
     # The last part should contain the name, separated by a comma
     name_part = parts[-1].strip()
-    
+
     # Split on the first comma only (format: Lastname, Firstname)
     if "," in name_part:
         last, first = name_part.split(",", 1)
         last_name = last.strip()
         # Join in case of multiple first names
         first_names = " ".join(first.split())
-        return first_names, last_name
-    
+        return normalize_name(first_names), normalize_name(last_name)
     return "", ""
+
 
 def extract_report_year(soup):
     """
@@ -70,13 +72,14 @@ def extract_report_year(soup):
     title = soup.title
     if not title or not title.text:
         return None
-    
+
     # Use regex to find a year after 'Annual Report for'
     match = re.search(r"Annual Report for (\d{4})", title.text)
     if match:
         return int(match.group(1))
-    
+
     return None
+
 
 def clean_text(text):
     """
@@ -92,10 +95,11 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip(", ")
     return text if text not in ("", "None") else None
 
+
 def extract_assets(soup):
     """
-    Parses the 'Part 3. Assets' table from the HTML soup and returns a list of dictionaries,
-    each representing an asset.
+    Parses the 'Part 3. Assets' table from the HTML soup and returns a list of
+    dictionaries, each representing an asset.
 
     Args:
         soup (BeautifulSoup): Parsed HTML soup object.
@@ -114,7 +118,7 @@ def extract_assets(soup):
     table = h3.find_parent("section").find("tbody")
     if not table:
         return assets
-    
+
     # Iterate over each row
     for row in table.find_all("tr"):
         cols = row.find_all("td")
@@ -137,7 +141,7 @@ def extract_assets(soup):
         income_type = clean_text(cols[5].get_text())
         income = clean_text(cols[6].get_text())
 
-        # Optionally extract a comment (if present) from <em> tags in the asset name column
+        # Optionally extract a comment (if present) from <em> tags
         comment = ""
         comment_div = cols[1].find("description")
         if comment_div:
