@@ -34,11 +34,13 @@ def initialize_database(config):
     politicians, reports, products, and assets (including self-referencing
     parent_asset_id for hierarchical assets).
 
+    Args:
+        config (Config): Configuration instance containing paths and settings.
     Returns:
         None
     """
 
-    conn = sqlite3.connect()
+    conn = sqlite3.connect(config.db_path)
     cur = conn.cursor()
 
     cur.execute("PRAGMA foreign_keys = ON;")
