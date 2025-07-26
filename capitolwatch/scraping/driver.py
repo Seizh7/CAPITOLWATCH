@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
+
 def setup_driver(headless=True):
     """
     Initializes a Chrome WebDriver.
