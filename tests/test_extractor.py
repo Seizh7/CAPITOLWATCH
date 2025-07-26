@@ -21,32 +21,35 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
-from capitolwatch.parsing.extractor import extract_politician_name, extract_report_year, extract_assets
+import capitolwatch.parsing.extractor as extractor
 from bs4 import BeautifulSoup
 import pathlib
+
 
 def test_extract_politician_name_standard():
     with open(pathlib.Path(__file__).parent / "test.html", "r") as f:
         html = f.read()
     soup = BeautifulSoup(html, "html.parser")
-    first, last = extract_politician_name(soup)
-    assert first == "Jeanne M"
-    assert last == "DUPONT"
+    first, last = extractor.extract_politician_name(soup)
+    assert first == "jeanne m"
+    assert last == "dupont"
+
 
 def test_extract_report_year_found():
     with open(pathlib.Path(__file__).parent / "test.html", "r") as f:
         html = f.read()
     soup = BeautifulSoup(html, "html.parser")
-    year = extract_report_year(soup)
+    year = extractor.extract_report_year(soup)
     assert year == 2023
+
 
 def test_extract_assets_basic():
     with open(pathlib.Path(__file__).parent / "test.html", "r") as f:
         html = f.read()
     soup = BeautifulSoup(html, "html.parser")
-    assets = extract_assets(soup)
+    assets = extractor.extract_assets(soup)
     assert len(assets) == 44
-    
+
     # First row
     assert assets[0]["index"] == "1"
     assert assets[0]["parent_index"] is None

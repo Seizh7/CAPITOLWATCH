@@ -25,12 +25,13 @@ DEALINGS IN THE SOFTWARE.
 from capitolwatch.parsing.cleaner import clean_html_string
 import pathlib
 
+
 def test_clean_html():
     with open(pathlib.Path(__file__).parent / "test.html", "r") as f:
         html = f.read()
     cleaned = clean_html_string(html)
     # Check for essential information in the cleaned text (anonymized)
-    assert "Jean M" in cleaned
+    assert "Jeanne M" in cleaned
     assert "DUPONT" in cleaned
     assert "Hammond Hardware Company" in cleaned
     assert "Corporate Securities" in cleaned

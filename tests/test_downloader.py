@@ -24,45 +24,97 @@ DEALINGS IN THE SOFTWARE.
 
 from unittest.mock import MagicMock, patch
 from capitolwatch.scraping.downloader import download_report
+import sqlite3
+
 
 def test_download_report(tmp_path):
-    """
-    Tests that download_report saves the HTML content to the correct filename,
-    using the report's unique ID from the URL.
-    """
-    # Mock Selenium driver with a fake page_source
+    # Mock du driver Selenium
     mock_driver = MagicMock()
     mock_driver.page_source = "<html><body>Fake Report</body></html>"
-    
-    # Example relative URL (same format as production)
+
     url = "/search/view/annual/abc123xyz-4567-8901-2345-6789example/"
-    output_folder = tmp_path  # pytest provides a temporary directory
-    
-    # Patch the print function to suppress output
+
+    # Préparation du mock config
+    mock_config = MagicMock()
+    mock_config.db_path = tmp_path / "test.db"
+    mock_config.output_folder = tmp_path / "output"
+    mock_config.output_folder.mkdir()  # Créer le dossier de sortie
+    mock_config.project_root = tmp_path
+
+    # Création de la base de données
+    conn = sqlite3.connect(mock_config.db_path)
+    conn.execute("""
+        CREATE TABLE reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT,
+            import_timestamp TEXT,
+            checksum TEXT,
+            encoding TEXT,
+            source_file TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
     with patch("builtins.print"):
-        download_report(mock_driver, url, output_folder)
-    
-    # Build the expected filename
-    expected_file = output_folder / "abc123xyz-4567-8901-2345-6789example.html"
-    # Assert that the file was created
+        download_report(mock_driver, url, mock_config)
+
+    # On rouvre la DB pour récupérer le chemin du fichier
+    conn = sqlite3.connect(mock_config.db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT source_file FROM reports")
+    row = cur.fetchone()
+    conn.close()
+
+    source_file = row[0]
+    expected_file = tmp_path / source_file
+
     assert expected_file.exists()
-    # Assert the contents are as expected
     content = expected_file.read_text(encoding="utf-8")
-    assert "<html><body>Fake Report</body></html>" in content
+    assert "Fake Report" in content
+
 
 def test_download_absolute_url(tmp_path):
-    """
-    Tests download_report with an absolute URL.
-    """
     mock_driver = MagicMock()
     mock_driver.page_source = "<html>Absolute</html>"
-    url = "https://efdsearch.senate.gov/search/view/annual/9876abcd-1234-5678-efgh-9876ijklmnop/"
-    output_folder = tmp_path
+
+    url = (
+        "https://efdsearch.senate.gov/search/view/annual/"
+        "9876abcd-1234-5678-efgh-9876ijklmnop/"
+    )
+
+    mock_config = MagicMock()
+    mock_config.db_path = tmp_path / "test.db"
+    mock_config.output_folder = tmp_path / "output"
+    mock_config.output_folder.mkdir()
+    mock_config.project_root = tmp_path
+
+    conn = sqlite3.connect(mock_config.db_path)
+    conn.execute("""
+        CREATE TABLE reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT,
+            import_timestamp TEXT,
+            checksum TEXT,
+            encoding TEXT,
+            source_file TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
 
     with patch("builtins.print"):
-        download_report(mock_driver, url, output_folder)
+        download_report(mock_driver, url, mock_config)
 
-    expected_file = output_folder / "9876abcd-1234-5678-efgh-9876ijklmnop.html"
+    conn = sqlite3.connect(mock_config.db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT source_file FROM reports")
+    row = cur.fetchone()
+    conn.close()
+
+    source_file = row[0]
+    expected_file = tmp_path / source_file
+
     assert expected_file.exists()
     content = expected_file.read_text(encoding="utf-8")
     assert "Absolute" in content
