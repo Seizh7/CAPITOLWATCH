@@ -76,8 +76,8 @@ def get_current_senators(config):
                 first_names_normalized = normalize_name(first_names)
 
                 senators.append({
-                    "first_name": last_name_normalized,
-                    "last_name": first_names_normalized,
+                    "first_name": first_names_normalized,
+                    "last_name": last_name_normalized,
                     "bioguide_id": bioguide_id,
                     "party": party
                 })
