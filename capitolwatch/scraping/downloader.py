@@ -27,6 +27,7 @@ import hashlib
 import sqlite3
 from datetime import datetime, timezone
 
+
 def download_report(driver, url, config):
     """
     Downloads a US Senate report HTML page, save, and fills the 'reports'
@@ -41,12 +42,14 @@ def download_report(driver, url, config):
         None
     """
     # Build the absolute URL if needed
-    full_url = url if url.startswith("http") else "https://efdsearch.senate.gov" + url
+    if url.startswith("http"):
+        pass
+    else:
+        url = "https://efdsearch.senate.gov" + url
 
-    driver.get(full_url)
-    time.sleep(2)  # Wait for the page to load completely
+    driver.get(url)
+    time.sleep(1)  # Wait for the page to load completely
 
-    # Get HTML content
     html_content = driver.page_source
 
     # Compute SHA-1 checksum of the HTML content
@@ -59,7 +62,7 @@ def download_report(driver, url, config):
         INSERT INTO reports (url, import_timestamp, checksum, encoding)
         VALUES (?, ?, ?, ?)
     """, (
-        full_url,
+        url,
         datetime.now(timezone.utc).isoformat(),
         checksum,
         "utf-8"

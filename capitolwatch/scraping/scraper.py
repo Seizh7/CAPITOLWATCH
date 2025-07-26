@@ -28,6 +28,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from bs4 import BeautifulSoup
 
+
 def extract_links(soup, year):
     """
     Searches for all annual report links for a given year in the results page.
@@ -49,6 +50,7 @@ def extract_links(soup, year):
                 links.append(a["href"])
     return links
 
+
 def submit_search_form(driver, start_date, end_date):
     """
     Fills in and submits the search form.
@@ -66,11 +68,13 @@ def submit_search_form(driver, start_date, end_date):
     try:
         # Find the agreement checkbox and activate it
         agree_checkbox = WebDriverWait(driver, 5).until(
-            expected_conditions.presence_of_element_located((By.ID, "agree_statement"))
+            expected_conditions.presence_of_element_located(
+                (By.ID, "agree_statement")
+            )
         )
         agree_checkbox.click()
         time.sleep(1)  # Wait for agreement to be submitted
-    except:
+    except Exception:
         # In case the agreement is already validated
         pass
 
@@ -78,23 +82,31 @@ def submit_search_form(driver, start_date, end_date):
     WebDriverWait(driver, 5).until(
         expected_conditions.presence_of_element_located((By.ID, "searchForm"))
     )
+
     # Select "Senator" option
-    senator_checkbox = driver.find_element(By.CSS_SELECTOR, "input.senator_filer")
+    senator_selector = "input.senator_filer"
+    senator_checkbox = driver.find_element(By.CSS_SELECTOR, senator_selector)
     if not senator_checkbox.is_selected():
         senator_checkbox.click()
+
     # Select "Annual" option
-    annual_checkbox = driver.find_element(By.CSS_SELECTOR, "input.report_types_annual")
+    annual_selector = "input.report_types_annual"
+    annual_checkbox = driver.find_element(By.CSS_SELECTOR, annual_selector)
     if not annual_checkbox.is_selected():
         annual_checkbox.click()
+
     # Fill in the search dates
     driver.find_element(By.ID, "fromDate").clear()
     driver.find_element(By.ID, "fromDate").send_keys(start_date)
     driver.find_element(By.ID, "toDate").clear()
     driver.find_element(By.ID, "toDate").send_keys(end_date)
+
     # Submit the search form
-    search_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    submit_button = "button[type='submit']"
+    search_button = driver.find_element(By.CSS_SELECTOR, submit_button)
     search_button.click()
     time.sleep(2)
+
 
 def get_all_links(driver, year):
     """
@@ -114,7 +126,9 @@ def get_all_links(driver, year):
         soup = BeautifulSoup(driver.page_source, "html.parser")
         page_links = extract_links(soup, year)
         print(f"Found {len(page_links)} reports on this page.")
+
         all_links.update(page_links)
+
         # Look for the "Next" button for pagination
         try:
             next_button = driver.find_element(By.ID, "filedReports_next")
