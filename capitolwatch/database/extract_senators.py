@@ -22,21 +22,46 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
+import re
 import requests
 import sqlite3
+
+
+def normalize_name(name):
+    """
+    Normalizes a personal name by removing punctuation, converting to
+    lowercase, and collapsing extra spaces.
+
+    Args:
+        name (str): The name to normalize.
+
+    Returns:
+        str: Normalized version of the name.
+    """
+    if not name:
+        return ""
+    name = name.lower()                  # Lowercase for consistent comparison
+    name = re.sub(r"[.']", "", name)     # Remove dots and apostrophes
+    name = re.sub(r"[-]", " ", name)     # Replace hyphens with space
+    name = re.sub(r"\s+", " ", name)     # Collapse multiple spaces into one
+    name = name.strip(", ")              # Remove commas and spaces
+    return name.strip()
 
 
 def get_current_senators(config):
     """
     Get all the current US senators from the Congress.gov API.
 
+    Args:
+        config (Config): Configuration object containing API key and settings.
+
     Returns:
         list of dict: Each dictionary contains 'first_name', 'last_name',
-        'bioguide_id', and 'party'.
+        'bioguide_id', 'party'.
     """
     senators = []
     offset = 0
-    limit = 100  # Number of results per API call (& number of senators)
+    limit = 100  # Number of results per API page (& number of senators)
 
     while True:
         # Build the API request URL and parameters
@@ -49,51 +74,61 @@ def get_current_senators(config):
             "offset": offset
         }
 
-        # Send GET request to the API
+        # Request the current batch of members from the Congress API
         response = requests.get(url, parameters)
-        response.raise_for_status()  # Raise error if request failed
+        response.raise_for_status()  # Stop if request fails
         data = response.json()
         members = data.get("members", [])
 
+        # Stop looping if there are no more members returned
         if not members:
             break
 
         for member in members:
             try:
-                # Extract the list of terms (service periods)
+                # Extract list of terms (service periods)
                 terms = member.get("terms", {}).get("item", [])
                 if not terms:
                     continue
 
-                # Check if the member is a senator
-                is_senator = any(term.get("chamber") == "Senate"
-                                 for term in terms)
+                # Check if the member has served in the Senate
+                is_senator = any(
+                    term.get("chamber") == "Senate"
+                    for term in terms
+                )
                 if not is_senator:
                     continue
 
+                # Parse the full name
                 full_name = member["name"]
                 party = member.get("partyName", "Unknown")
                 bioguide_id = member.get("bioguideId", "")
 
-                # Split name into last and first names if comma present
+                # Split into last and first names
                 if "," in full_name:
-                    last_name, first_names = map(str.strip,
-                                                 full_name.split(",", 1))
+                    last_name, first_names = map(
+                        str.strip,
+                        full_name.split(",", 1)
+                    )
                 else:
                     last_name = ""
                     first_names = full_name
 
+                last_name_normalized = normalize_name(last_name)
+                first_names_normalized = normalize_name(first_names)
+
                 senators.append({
-                    "first_name": first_names,
-                    "last_name": last_name,
+                    "first_name": last_name_normalized,
+                    "last_name": first_names_normalized,
                     "bioguide_id": bioguide_id,
                     "party": party
                 })
 
             except Exception as e:
+                # Log and skip any errors on a member (e.g. missing fields)
                 print(f"Error for member {member}: {e}")
 
-        # Move to the next page of results
+        # Move to next page of API results
         offset += limit
 
     return senators
