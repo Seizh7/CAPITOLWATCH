@@ -1,9 +1,14 @@
+# Copyright (c) 2025 Seizh7
+# Licensed under the Apache License, Version 2.0
+# (http://www.apache.org/licenses/LICENSE-2.0)
+
 import re
 from bs4 import BeautifulSoup
 
+
 def clean_html_string(html):
     """
-    Cleans a raw HTML string by removing unwanted tags, 
+    Cleans a raw HTML string by removing unwanted tags,
     special characters, and normalizing the text.
 
     Args:
@@ -14,25 +19,25 @@ def clean_html_string(html):
     """
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, "html.parser")
-    
 
     # Remove unnecessary tags (script, style, header, footer, etc.)
-    for tag in soup(["script", "style", "noscript", "footer", "header", "nav", "aside"]):
+    for tag in soup([
+        "script", "style", "noscript",
+        "footer", "header", "nav", "aside"
+    ]):
         tag.decompose()
 
-    
     # Extract plain text from HTML (keeping line breaks between blocks)
     text = soup.get_text(separator="\n")
 
-
-    
-    # Replace multiple whitespace characters (spaces, tabs, newlines) with a single space
+    # Replace multiple whitespace characters with a single space
     text = re.sub(r"\s+", " ", text)
 
     # Remove special characters except basic punctuation (.,:;!?€$-)
-    text = re.sub(r"[^\w\s.,:;!?€$-]", "", text)    
+    text = re.sub(r"[^\w\s.,:;!?€$-]", "", text)
 
     return text
+
 
 def clean_html_file(filepath):
     """
