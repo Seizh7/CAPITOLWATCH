@@ -150,4 +150,88 @@ def get_politician_by_id(
             connection.close()
 
 
-__all__ = ["get_politician_id", "list_politicians", "get_politician_by_id"]
+def add_politicians(
+    politicians,
+    *,
+    config: Optional[object] = None,
+    connection=None
+):
+    """
+    Inserts the list of senators into the 'politicians' table in the database.
+
+    Args:
+        politicians (list of dict): List of politician information to insert.
+    """
+    return add_politician_list(
+        politicians, config=config, connection=connection
+    )
+
+
+def add_politician(
+    politician: dict,
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> bool:
+    """
+    Insert a single politician into the database if it doesn't already exist.
+
+    Expected keys in `politician`:
+      - first_name (str)
+      - last_name (str)
+      - party (str)
+      - bioguide_id (str) -> stored as `id` in DB
+
+    Returns:
+      - bool: True if inserted, False if ignored (already present).
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO politicians (
+                first_name, last_name, party, id
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                politician["first_name"],
+                politician["last_name"],
+                politician["party"],
+                politician["bioguide_id"],
+            ),
+        )
+
+        if close:
+            connection.commit()
+        return cur.rowcount > 0
+    finally:
+        if close:
+            connection.close()
+
+
+def add_politician_list(
+    politicians,
+    *,
+    config: Optional[object] = None,
+    connection=None,
+):
+    """
+    Insert a list of politicians with add_politician
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        for person in politicians:
+            add_politician(person, config=config, connection=connection)
+        if close:
+            connection.commit()
+    finally:
+        if close:
+            connection.close()
