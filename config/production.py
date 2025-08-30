@@ -12,11 +12,13 @@ class Config:
 
         self.data_dir = self.project_root / "data"
         self.source_dir = self.project_root / "capitolwatch"
+        self.database_dir = self.project_root / "data"
 
         self.datapipeline_dir = self.source_dir / "datapipeline"
+        self.services_dir = self.source_dir / "services"
+
         self.scraping_dir = self.datapipeline_dir / "scraping"
         self.parsing_dir = self.datapipeline_dir / "parsing"
-        self.database_dir = self.datapipeline_dir / "database"
 
         self.year = year
         self.search_year = str(int(self.year) + 1)
