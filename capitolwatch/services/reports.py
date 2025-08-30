@@ -11,7 +11,7 @@ from config import CONFIG
 def get_reports_for_politician(
     politician_id: str,
     *,
-    limit: int | None = None,
+    limit: Optional[int] = None,
     offset: int = 0,
     config: Optional[object] = None,
     connection=None,
@@ -57,7 +57,7 @@ def get_report(
     *,
     config: Optional[object] = None,
     connection=None,
-) -> dict | None:
+) -> Optional[dict]:
     """
     Fetch a single report by ID, joined with the politician’s basic info.
 
@@ -92,12 +92,12 @@ def get_report(
             connection.close()
 
 
-def update_report_match(
+def update_report(
     report_id: int,
     politician_id: str,
     *,
-    year: int | None = None,
-    url: str | None = None,
+    year: Optional[int] = None,
+    url: Optional[str] = None,
     config: Optional[object] = None,
     connection=None,
 ) -> bool:
@@ -107,9 +107,9 @@ def update_report_match(
     Args:
         report_id: Report primary key to update.
         politician_id: Target politician ID to set.
-        year: Optional year override.
-        url: Optional URL override.
-        config: Optional config override.
+        year: Optional year.
+        url: Optional URL.
+        config: Optional config.
         connection: Optional existing DB connection to reuse.
 
     Returns:
