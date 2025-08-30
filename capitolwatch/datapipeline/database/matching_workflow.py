@@ -8,8 +8,12 @@ from typing import Optional, Tuple
 from bs4 import BeautifulSoup
 
 from capitolwatch.services.politician_matcher import get_enhanced_politician_id
+from capitolwatch.services.reports import update_report
 from capitolwatch.db import get_connection
-from capitolwatch.datapipeline.parsing.extractor import extract_politician_name
+from capitolwatch.datapipeline.parsing.extractor import (
+    extract_politician_name,
+    extract_report_year,
+)
 from config import CONFIG
 
 
@@ -36,6 +40,33 @@ def resolve_politician(
     return politician_id, first_names, last_name
 
 
+def parse_report_id_from_filename(filename: str) -> Optional[int]:
+    """
+    Given a filename like "123.html", return the integer report ID (123).
+    Returns None if it cannot be parsed.
+    """
+    try:
+        base = os.path.basename(filename)
+        stem = os.path.splitext(base)[0]
+        return int(stem)
+    except Exception:
+        return None
+
+
+def resolve_report_info(
+    cursor, soup: BeautifulSoup
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[int]]:
+    """
+    Extract politician resolution and report year from an HTML soup.
+
+    Returns:
+        (politician_id, first_names, last_name, year)
+    """
+    politician_id, first_names, last_name = resolve_politician(cursor, soup)
+    year = extract_report_year(soup)
+    return politician_id, first_names, last_name, year
+
+
 def process_report_matching(html_file_path: str) -> Optional[str]:
     """
     Parse a stored HTML report, extract the politician name, and resolve it
@@ -55,9 +86,7 @@ def process_report_matching(html_file_path: str) -> Optional[str]:
             content = f.read()
         soup = BeautifulSoup(content, "html.parser")
 
-        politician_id, first_names, last_name = resolve_politician(
-            cur, soup
-        )
+        politician_id, first_names, last_name = resolve_politician(cur, soup)
 
         if not first_names or not last_name:
             print(f"Could not extract name from {html_file_path}")
@@ -73,7 +102,7 @@ def process_report_matching(html_file_path: str) -> Optional[str]:
         conn.close()
 
 
-def main_processing_workflow() -> dict:
+def main() -> dict:
     """
     Walk through all HTML reports, try to resolve each to a politician ID
     using the enhanced matching helper, and collect simple run statistics.
@@ -87,7 +116,7 @@ def main_processing_workflow() -> dict:
     """
     reports_dir = CONFIG.output_folder
 
-    stats = {"processed": 0, "matched": 0, "needs_review": []}
+    stats = {"processed": 0, "matched": 0, "updated": 0, "needs_review": []}
 
     conn = get_connection(CONFIG)
     cur = conn.cursor()
@@ -105,13 +134,40 @@ def main_processing_workflow() -> dict:
                     content = f.read()
                 soup = BeautifulSoup(content, "html.parser")
 
-                # Correct function name
-                politician_id, first_names, last_name = resolve_politician(
-                    cur, soup
-                )
+                # Extract match and metadata
+                (
+                    politician_id,
+                    first_names,
+                    last_name,
+                    year,
+                ) = resolve_report_info(cur, soup)
 
                 if first_names and last_name and politician_id:
                     stats["matched"] += 1
+
+                    # Update the reports table with the matched politician_id
+                    report_id = parse_report_id_from_filename(filename)
+                    if report_id is not None:
+                        try:
+                            ok = update_report(
+                                report_id,
+                                politician_id,
+                                year=year,
+                                connection=conn,
+                            )
+                            if ok:
+                                stats["updated"] += 1
+                            else:
+                                print(
+                                    "Warning: report id "
+                                    f"{report_id} not found for "
+                                    f"{filename}"
+                                )
+                        except Exception as e:
+                            print(
+                                "Error updating report "
+                                f"{report_id} for {filename}: {e}"
+                            )
 
                     # Optionally print the canonical DB name next to the ID
                     try:
@@ -156,15 +212,21 @@ def main_processing_workflow() -> dict:
                 print(f"Error processing {filename}: {e}")
 
     finally:
+        try:
+            # Commit all updates if any were made using this connection
+            conn.commit()
+        except Exception:
+            pass
         conn.close()
 
     print("\nProcessing Summary:")
     print(f"Processed: {stats['processed']}")
     print(f"Matched: {stats['matched']}")
+    print(f"Updated: {stats['updated']}")
     print(f"Need review: {len(stats['needs_review'])}")
 
     return stats
 
 
 if __name__ == "__main__":
-    main_processing_workflow()
+    main()

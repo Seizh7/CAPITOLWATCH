@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Export politicians and reports to CSV",
+			"type": "shell",
+			"command": "python -m capitolwatch.datapipeline.database.export_csv --db data/capitolwatch.db --outdir data --tables reports politicians",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
