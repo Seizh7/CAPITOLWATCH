@@ -3,7 +3,7 @@
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
 import re
-from capitolwatch.datapipeline.parsing.extractor import normalize_name
+from capitolwatch.services.politicians import normalize_name
 
 
 def extract_politician_name(soup):
