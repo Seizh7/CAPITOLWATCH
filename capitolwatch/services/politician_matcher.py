@@ -6,7 +6,9 @@ import json
 from typing import Dict, Optional, Tuple
 
 from capitolwatch.db import get_connection
-from capitolwatch.services.politicians import get_politician_id, normalize_name
+from capitolwatch.services.politicians import (
+    get_politician_id_by_name, normalize_name
+)
 from config import CONFIG
 
 # Prefer external compare_names for better accuracy; fallback if unavailable
@@ -102,7 +104,7 @@ def match_politician(
 
     # 2) Exact DB lookup
     connection = getattr(cur, "connection", None)
-    politician_id = get_politician_id(
+    politician_id = get_politician_id_by_name(
         first_names_norm, last_name_norm, connection=connection
     )
 
