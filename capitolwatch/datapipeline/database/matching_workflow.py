@@ -42,7 +42,7 @@ def resolve_politician(
     return politician_id, first_names, last_name
 
 
-def parse_report_id_from_filename(filename: str) -> Optional[int]:
+def parse_report_id(filename: str) -> Optional[int]:
     """
     Given a filename like "123.html", return the integer report ID (123).
     Returns None if it cannot be parsed.
@@ -148,7 +148,7 @@ def main() -> dict:
                     stats["matched"] += 1
 
                     # Update the reports table with the matched politician_id
-                    report_id = parse_report_id_from_filename(filename)
+                    report_id = parse_report_id(filename)
                     if report_id is not None:
                         try:
                             ok = update_report_fields(
