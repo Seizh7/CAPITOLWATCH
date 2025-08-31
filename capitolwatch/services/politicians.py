@@ -4,44 +4,47 @@
 
 import re
 from typing import Optional, Iterable
+
 from capitolwatch.db import get_connection
 from config import CONFIG
 
 
+# ---------- Utilities ----------
+
 def normalize_name(name: str) -> str:
     """
-    Normalizes a personal name by removing punctuation, converting to
-    lowercase, and collapsing extra spaces.
+    Normalize a personal name: lowercase, remove punctuation, replace hyphens
+    by spaces, collapse multiple spaces, strip commas/edges.
     """
     if not name:
         return ""
-    name = name.lower()                  # Lowercase for consistent comparison
-    name = re.sub(r"[.']", "", name)     # Remove dots and apostrophes
-    name = re.sub(r"[-]", " ", name)     # Replace hyphens with space
-    name = re.sub(r"\s+", " ", name)     # Collapse multiple spaces into one
-    name = name.strip(", ")              # Remove commas and spaces
+    name = name.lower()
+    name = re.sub(r"[.']", "", name)
+    name = re.sub(r"-", " ", name)
+    name = re.sub(r"\s+", " ", name).strip(", ")
     return name.strip()
 
 
-def get_politician_id(
+# ---------- Read API (get*) ----------
+
+def get_politician_id_by_name(
     first_name: str,
     last_name: str,
     *,
     config: Optional[object] = None,
-    connection=None
+    connection=None,
 ) -> Optional[str]:
     """
-    Look up a politician ID by first/last name.
+    Return a politician ID given normalized first/last names (exact match).
 
     Args:
-        first_name (str): First name (will be normalized).
-        last_name (str): Last name (will be normalized).
-        config (object, optional): Optional config override.
-        connection (sqlite3.Connection, optional): Reuse an existing
-            DB connection.
+        first_name: Raw first name (will be normalized).
+        last_name: Raw last name (will be normalized).
+        config: Optional config override.
+        connection: Optional existing DB connection.
 
     Returns:
-        Optional[str]: Politician ID if found, else None.
+        Politician ID if found, else None.
     """
     first_name = normalize_name(first_name)
     last_name = normalize_name(last_name)
@@ -54,9 +57,10 @@ def get_politician_id(
         cur = connection.cursor()
         cur.execute(
             """
-            SELECT id FROM politicians
-            WHERE (first_name=? AND last_name=?)
-               OR (first_name=? AND last_name=?)
+            SELECT id
+            FROM politicians
+            WHERE (first_name = ? AND last_name = ?)
+               OR (first_name = ? AND last_name = ?)
             LIMIT 1
             """,
             (first_name, last_name, last_name, first_name),
@@ -68,25 +72,18 @@ def get_politician_id(
             connection.close()
 
 
-def list_politicians(
+def get_politicians(
     *,
     limit: Optional[int] = None,
     offset: int = 0,
     config: Optional[object] = None,
-    connection=None
+    connection=None,
 ) -> list[dict]:
     """
-    Return a list of politicians from the DB.
-
-    Args:
-        limit (int | None): Max number of rows (None = no limit).
-        offset (int): Offset for pagination.
-        config (object, optional): Optional config override.
-        connection (sqlite3.Connection, optional): Reuse an existing
-            DB connection.
+    Return a (paginated) list of politicians.
 
     Returns:
-        list[dict]: List of politicians with {id, first_name, last_name, party}
+        [{id, first_name, last_name, party}, ...]
     """
     close = False
     if connection is None:
@@ -111,23 +108,14 @@ def list_politicians(
             connection.close()
 
 
-def get_politician_by_id(
+def get_politician(
     politician_id: str,
     *,
     config: Optional[object] = None,
-    connection=None
+    connection=None,
 ) -> Optional[dict]:
     """
-    Fetch a single politician record by ID.
-
-    Args:
-        politician_id (str): The unique politician ID.
-        config (object, optional): Optional config override.
-        connection (sqlite3.Connection, optional): Reuse an existing
-            DB connection.
-
-    Returns:
-        dict | None: Politician record if found, else None.
+    Return a single politician by ID, or None if not found.
     """
     close = False
     if connection is None:
@@ -150,22 +138,7 @@ def get_politician_by_id(
             connection.close()
 
 
-def add_politicians(
-    politicians,
-    *,
-    config: Optional[object] = None,
-    connection=None
-):
-    """
-    Inserts the list of senators into the 'politicians' table in the database.
-
-    Args:
-        politicians (list of dict): List of politician information to insert.
-    """
-    return add_politician_list(
-        politicians, config=config, connection=connection
-    )
-
+# ---------- Write API (add*) ----------
 
 def add_politician(
     politician: dict,
@@ -174,16 +147,16 @@ def add_politician(
     connection=None,
 ) -> bool:
     """
-    Insert a single politician into the database if it doesn't already exist.
+    Insert a single politician if not present.
 
     Expected keys in `politician`:
       - first_name (str)
       - last_name (str)
       - party (str)
-      - bioguide_id (str) -> stored as `id` in DB
+      - bioguide_id (str)  -> stored as `id` in DB
 
     Returns:
-      - bool: True if inserted, False if ignored (already present).
+      True if inserted, False if already existing (ignored).
     """
     close = False
     if connection is None:
@@ -205,7 +178,6 @@ def add_politician(
                 politician["bioguide_id"],
             ),
         )
-
         if close:
             connection.commit()
         return cur.rowcount > 0
@@ -214,24 +186,30 @@ def add_politician(
             connection.close()
 
 
-def add_politician_list(
-    politicians,
+def add_politicians(
+    politicians: list[dict],
     *,
     config: Optional[object] = None,
     connection=None,
-):
+) -> int:
     """
-    Insert a list of politicians with add_politician
+    Bulk insert a list of politicians (idempotent with INSERT OR IGNORE).
+
+    Returns:
+        Number of rows actually inserted.
     """
     close = False
     if connection is None:
         connection, close = get_connection(config or CONFIG), True
 
+    inserted = 0
     try:
         for person in politicians:
-            add_politician(person, config=config, connection=connection)
+            if add_politician(person, config=config, connection=connection):
+                inserted += 1
         if close:
             connection.commit()
+        return inserted
     finally:
         if close:
             connection.close()
