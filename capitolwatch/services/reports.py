@@ -151,7 +151,7 @@ def update_report_fields(
 
 # ---------- Write API (add*) ----------
 
-def upsert_report_import_metadata(
+def add_report(
     report_id: int,
     *,
     checksum: str,
