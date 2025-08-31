@@ -31,8 +31,12 @@ class Config:
 
         self.db_path = self.data_dir / "capitolwatch_dev.db"
 
-        self.api_key = os.getenv("CONGRESS_API_KEY")
-        if not self.api_key:
+        self.congress_api_key = os.getenv("CONGRESS_API_KEY")
+        if not self.congress_api_key:
             raise ValueError("Missing CONGRESS_API_KEY (development)")
+
+        self.openfigi_api_key = os.getenv("OPEN_FIGI_API_KEY")
+        if not self.openfigi_api_key:
+            raise ValueError("Missing OPEN_FIGI_API_KEY (development)")
 
         self.debug = True
