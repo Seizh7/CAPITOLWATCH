@@ -162,7 +162,7 @@ def match_politician(
     return None, 0.0, "NO_MATCH", "NO_MATCH"
 
 
-def get_enhanced_politician_id(
+def get_politician_id_by_name_enhanced(
     cursor,
     first_name_tokens: list[str],
     last_name_tokens: list[str],

@@ -7,8 +7,10 @@ from typing import Optional, Tuple
 
 from bs4 import BeautifulSoup
 
-from capitolwatch.services.politician_matcher import get_enhanced_politician_id
-from capitolwatch.services.reports import update_report
+from capitolwatch.services.politician_matcher import (
+    get_politician_id_by_name_enhanced
+)
+from capitolwatch.services.reports import update_report_fields
 from capitolwatch.db import get_connection
 from capitolwatch.datapipeline.parsing.extractor import (
     extract_politician_name,
@@ -34,7 +36,7 @@ def resolve_politician(
         return None, first_names, last_name
 
     # Resolve to a politician ID (HIGH/MEDIUM/override only)
-    politician_id = get_enhanced_politician_id(
+    politician_id = get_politician_id_by_name_enhanced(
         cursor, first_names.split(), last_name.split()
     )
     return politician_id, first_names, last_name
@@ -149,7 +151,7 @@ def main() -> dict:
                     report_id = parse_report_id_from_filename(filename)
                     if report_id is not None:
                         try:
-                            ok = update_report(
+                            ok = update_report_fields(
                                 report_id,
                                 politician_id,
                                 year=year,

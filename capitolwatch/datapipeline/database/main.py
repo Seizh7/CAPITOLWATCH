@@ -3,9 +3,9 @@
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
 from config import CONFIG
-from capitolwatch.datapipeline.database.init_db import initialize_database
+from capitolwatch.services.init_db import initialize_database
 import capitolwatch.datapipeline.database.congress_api as es
-from capitolwatch.services.politicians import add_politician_list
+from capitolwatch.services.politicians import add_politicians
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     senators = es.get_current_senators(CONFIG)
     print(f"Total senators found: {len(senators)}")
 
-    add_politician_list(senators, config=CONFIG)
+    add_politicians(senators, config=CONFIG)
     print("Senators have been added to the database.")
 
 
