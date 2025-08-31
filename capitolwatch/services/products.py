@@ -92,6 +92,40 @@ def get_product(
             connection.close()
 
 
+def get_products_without_isin(
+    *,
+    config: Optional[object] = None,
+    connection=None
+) -> list[dict]:
+    """
+    Retrieve all products that have no ISIN set (NULL or empty string).
+
+    Args:
+        config: Optional config override (defaults to global CONFIG).
+        connection: Optional existing SQLite connection to reuse.
+
+    Returns:
+        list[dict]: List of products with keys {id, name, type}.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            """
+            SELECT id, name, type
+            FROM products
+            WHERE isin IS NULL OR isin = ''
+            """
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        if close:
+            connection.close()
+
+
 # ---------- Write API (add*/update*) ----------
 
 def add_product(
