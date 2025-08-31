@@ -95,6 +95,40 @@ def get_report_by_id(
             connection.close()
 
 
+def get_politician_id(
+    report_id: int,
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> Optional[str]:
+    """
+    Return the politician_id for a given report ID, or None if not found.
+
+    Args:
+        report_id: Report primary key.
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        The politician_id as a string, or None if the report does not exist
+        or has no politician linked.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            "SELECT politician_id FROM reports WHERE id = ?",
+            (report_id,),
+        )
+        row = cur.fetchone()
+        return row["politician_id"] if row else None
+    finally:
+        if close:
+            connection.close()
+
+
 # ---------- Update API (update*) ----------
 
 def update_report_fields(
