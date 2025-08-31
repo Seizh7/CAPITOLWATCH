@@ -1,8 +1,12 @@
-# Copyright (c) 2025 Seizh7
-# Licensed under the Apache License, Version 2.0
-# (http://www.apache.org/licenses/LICENSE-2.0)
+"""
+Product services: CRUD and helpers for the products table.
+
+Implements add_product returning a generated INTEGER PRIMARY KEY id,
+with optional ISIN and details, plus a function to update ISIN/details.
+"""
 
 from typing import Optional
+import sqlite3
 
 from capitolwatch.db import get_connection
 from config import CONFIG
@@ -21,14 +25,14 @@ def normalize_isin(isin: Optional[str]) -> Optional[str]:
 
 # ---------- Read API (get*) ----------
 
-def get_product_id_by_isin(
+def get_id_by_isin(
     isin: str,
     *,
     config: Optional[object] = None,
     connection=None,
 ) -> Optional[int]:
     """
-    Return a product_id given an ISIN (exact match after normalization).
+    Return a id given an ISIN (exact match after normalization).
 
     Args:
         isin: Product ISIN (case-insensitive).
@@ -36,7 +40,7 @@ def get_product_id_by_isin(
         connection: Optional existing DB connection to reuse.
 
     Returns:
-        The product_id if found, else None.
+        The id if found, else None.
     """
     isin = normalize_isin(isin)
 
@@ -47,18 +51,18 @@ def get_product_id_by_isin(
     try:
         cur = connection.cursor()
         cur.execute(
-            "SELECT product_id FROM products WHERE isin = ? LIMIT 1",
+            "SELECT id FROM products WHERE isin = ? LIMIT 1",
             (isin,),
         )
         row = cur.fetchone()
-        return int(row["product_id"]) if row else None
+        return int(row["id"]) if row else None
     finally:
         if close:
             connection.close()
 
 
 def get_product(
-    product_id: int,
+    id: int,
     *,
     config: Optional[object] = None,
     connection=None,
@@ -66,7 +70,7 @@ def get_product(
     """
     Fetch a single product by its primary key.
 
-    Returns: {product_id, name, isin, type, details} or None
+    Returns: {id, name, isin, type, details} or None
     """
     close = False
     if connection is None:
@@ -75,11 +79,11 @@ def get_product(
         cur = connection.cursor()
         cur.execute(
             """
-            SELECT product_id, name, isin, type, details
+            SELECT id, name, isin, type, details
             FROM products
-            WHERE product_id = ?
+            WHERE id = ?
             """,
-            (product_id,),
+            (id,),
         )
         row = cur.fetchone()
         return dict(row) if row else None
@@ -88,193 +92,141 @@ def get_product(
             connection.close()
 
 
-def get_products(
-    *,
-    limit: Optional[int] = None,
-    offset: int = 0,
-    product_type: Optional[str] = None,
-    name_like: Optional[str] = None,
-    config: Optional[object] = None,
-    connection=None,
-) -> list[dict]:
-    """
-    Return a (paginated) list of products, with optional filters.
-
-    Args:
-        limit: Optional page size. If None, returns all rows.
-        offset: Offset for pagination (ignored if limit is None).
-        product_type: Optional exact match on products.type.
-        name_like: Optional substring match on products.name
-            (case-insensitive).
-    """
-    close = False
-    if connection is None:
-        connection, close = get_connection(config or CONFIG), True
-
-    try:
-        where: list[str] = []
-        params: list[object] = []
-
-        if product_type:
-            where.append("type = ?")
-            params.append(product_type)
-
-        if name_like:
-            where.append("LOWER(name) LIKE ?")
-            params.append(f"%{name_like.lower()}%")
-
-        sql = (
-            "SELECT product_id, name, isin, type, details FROM products"
-        )
-        if where:
-            sql += " WHERE " + " AND ".join(where)
-        sql += " ORDER BY name"
-
-        if limit is not None:
-            sql += " LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-
-        cur = connection.cursor()
-        cur.execute(sql, tuple(params))
-        return [dict(r) for r in cur.fetchall()]
-    finally:
-        if close:
-            connection.close()
-
-
-# ---------- Write API (add*) ----------
+# ---------- Write API (add*/update*) ----------
 
 def add_product(
     product: dict,
     *,
     config: Optional[object] = None,
     connection=None,
-) -> bool:
+) -> int:
     """
-    Insert a single product if not present.
+    Insert a single product and return its generated id.
 
     Expected keys in `product`:
-      - name (str)
-      - isin (str)
-      - type (str)
+      - name (str, required)
+      - type (str, required)
+      - isin (str, optional)
       - details (str, optional)
 
+    Behavior:
+      - Uses INTEGER PRIMARY KEY auto-generation for id.
+      - ISIN is optional. If provided, it is normalized and must be unique.
+      - Details is optional.
+      - If a conflicting row already exists (same ISIN or same (name,type)
+        when ISIN is missing), the existing id is returned.
+
     Returns:
-      True if inserted, False if already existing (ignored).
+      id (int)
     """
     close = False
     if connection is None:
         connection, close = get_connection(config or CONFIG), True
 
     name = product.get("name")
+    product_type = product.get("type")
+    if not name or not product_type:
+        raise ValueError("'name' and 'type' are required to create a product")
+
     isin = normalize_isin(product.get("isin"))
-    ptype = product.get("type")
     details = product.get("details")
 
     try:
         cur = connection.cursor()
-        cur.execute(
-            """
-            INSERT OR IGNORE INTO products (name, isin, type, details)
-            VALUES (?, ?, ?, ?)
-            """,
-            (name, isin, ptype, details),
-        )
-        if close:
-            connection.commit()
-        return cur.rowcount > 0
-    finally:
-        if close:
-            connection.close()
 
-
-def add_products(
-    products: list[dict],
-    *,
-    config: Optional[object] = None,
-    connection=None,
-) -> int:
-    """
-    Bulk insert products (idempotent). Returns the number of rows inserted.
-    """
-    close = False
-    if connection is None:
-        connection, close = get_connection(config or CONFIG), True
-
-    inserted = 0
-    try:
-        for prod in products:
-            if add_product(prod, config=config, connection=connection):
-                inserted += 1
-        if close:
-            connection.commit()
-        return inserted
-    finally:
-        if close:
-            connection.close()
-
-
-def get_or_create_product_id(
-    product: dict,
-    *,
-    config: Optional[object] = None,
-    connection=None,
-) -> int:
-    """
-    Convenience helper: return the product_id for a product spec, inserting
-    it if missing. Uses ISIN as the uniqueness key if provided, otherwise
-    falls back to (name, type) uniqueness heuristic.
-
-    Returns:
-        product_id (int)
-    """
-    close = False
-    if connection is None:
-        connection, close = get_connection(config or CONFIG), True
-
-    try:
-        isin = normalize_isin(product.get("isin"))
         if isin:
-            pid = get_product_id_by_isin(
+            existing_id = get_id_by_isin(
                 isin, config=config, connection=connection
             )
-            if pid is not None:
-                return pid
-            # Not found -> insert
-            add_product(product, config=config, connection=connection)
-            pid = get_product_id_by_isin(
-                isin, config=config, connection=connection
-            )
-            if pid is None:
-                raise RuntimeError("Failed to create product for ISIN")
-            return pid
+            if existing_id is not None:
+                return existing_id
 
-        # Fallback: try to find by (name, type)
-        cur = connection.cursor()
+        # Fallback: look for existing by (name, type)
         cur.execute(
             (
-                "SELECT product_id FROM products "
+                "SELECT id FROM products "
                 "WHERE name = ? AND type = ? LIMIT 1"
             ),
-            (product.get("name"), product.get("type")),
+            (name, product_type),
         )
         row = cur.fetchone()
         if row:
-            return int(row["product_id"])
+            return int(row["id"])
 
-        add_product(product, config=config, connection=connection)
-
+        # Insert new product
         cur.execute(
-            (
-                "SELECT product_id FROM products "
-                "WHERE name = ? AND type = ? LIMIT 1"
-            ),
-            (product.get("name"), product.get("type")),
+            """
+            INSERT INTO products (name, type, isin, details)
+            VALUES (?, ?, ?, ?)
+            """,
+            (name, product_type, isin, details),
         )
-        row = cur.fetchone()
-        if not row:
-            raise RuntimeError("Failed to create product (no ISIN)")
-        return int(row["product_id"])
+        new_id = int(cur.lastrowid)
+        if close:
+            connection.commit()
+        return new_id
+    finally:
+        if close:
+            connection.close()
+
+
+def update_product(
+    id: int,
+    *,
+    isin: Optional[str] = None,
+    details: Optional[str] = None,
+    config: Optional[object] = None,
+    connection=None,
+) -> bool:
+    """
+    Update a product to add/set its ISIN and/or details.
+
+    Args:
+        id: Target product id to update.
+        isin: Optional ISIN to set (normalized, must be unique if provided).
+        details: Optional free-form details.
+
+    Returns:
+        True if at least one column was updated, False otherwise.
+
+    Raises:
+        ValueError on invalid input or ISIN uniqueness conflicts.
+    """
+    if isin is None and details is None:
+        return False
+
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        sets = []
+        params: list[object] = []
+
+        if isin is not None:
+            norm_isin = normalize_isin(isin)
+            sets.append("isin = ?")
+            params.append(norm_isin)
+
+        if details is not None:
+            sets.append("details = ?")
+            params.append(details)
+
+        params.append(id)
+
+        sql = f"UPDATE products SET {', '.join(sets)} WHERE id = ?"
+
+        cur = connection.cursor()
+        try:
+            cur.execute(sql, tuple(params))
+        except sqlite3.IntegrityError as e:
+            # Likely ISIN UNIQUE constraint violation
+            raise ValueError(str(e))
+
+        updated = cur.rowcount > 0
+        if close:
+            connection.commit()
+        return updated
     finally:
         if close:
             connection.close()

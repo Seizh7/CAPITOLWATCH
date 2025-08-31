@@ -53,7 +53,7 @@ def initialize_database(config):
     # Describes each unique financial product
     cur.execute("""
     CREATE TABLE IF NOT EXISTS products (
-        product_id INTEGER PRIMARY KEY,         -- Unique ID for the product
+        id INTEGER PRIMARY KEY,         -- Unique ID for the product
         name TEXT,                              -- Name of the product
         isin TEXT UNIQUE,                       -- ISIN code
         type TEXT,                              -- Product type
