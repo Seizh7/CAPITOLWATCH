@@ -13,6 +13,7 @@ This script uses the services layer for all DB interactions.
 """
 
 from typing import Optional
+from pathlib import Path
 
 from bs4 import BeautifulSoup
 
@@ -27,21 +28,34 @@ from capitolwatch.datapipeline.database.matching_workflow import (
 )
 
 
-def sort_key(a: dict) -> tuple:
+def sort_key(asset: dict) -> tuple:
     """
-    Sort key for asset items based on their hierarchical index.
+    Sorting key for asset items based on hierarchical index.
+
+    Args:
+        asset (dict): Asset dictionary expected to contain an 'index' field,
+            e.g. "1.2.3". Missing or malformed indices are pushed to the end.
+
+    Returns:
+        tuple: A tuple of integers for sorting (e.g. "1.2.3" -> (1, 2, 3)),
+               or (inf,) if the index is missing/invalid.
     """
-    idx = str(a.get("index", ""))
+    idx = str(asset.get("index", "")).strip()
     try:
-        return tuple(int(p) for p in idx.split("."))
+        parts = [
+            int(p) for p in idx.split(".") if p.strip().isdigit()
+        ]
+        if not parts:
+            raise ValueError("empty index parts")
+        return tuple(parts)
     except Exception:
         return (float("inf"),)
 
 
 def process_assets_parsing(html_file_path: str) -> Optional[str]:
     """
-    Parse a stored HTML report, extract assets info, create products if needed,
-    and insert assets into the DB with parent-child relationships.
+    Parse a stored HTML report, extract assets, ensure products exist,
+    and insert assets with parent-child relationships.
 
     Args:
         html_file_path: Path to the HTML report to process.
@@ -50,34 +64,35 @@ def process_assets_parsing(html_file_path: str) -> Optional[str]:
         A status string like "inserted: <count>"; or None on fatal error.
     """
     conn = get_connection(CONFIG)
-    # Use a single connection/transaction for all inserts
 
     try:
+        # Parse HTML
         with open(html_file_path, "r", encoding="utf-8") as f:
             content = f.read()
         soup = BeautifulSoup(content, "html.parser")
 
+        # Resolve report id from filename
         report_id = parse_report_id(html_file_path)
         if report_id is None:
             print(f"Could not parse report id from filename: {html_file_path}")
             return None
 
-        # Ensure report exists and fetch politician link if any (optional)
+        # Read politician_id linked to the report
         try:
             politician_id = get_politician_id(report_id, connection=conn)
         except Exception:
             politician_id = None
 
+        # Extract asset blocks
         assets = extract_assets(soup)
         if not assets:
             print(f"No assets found in report {report_id} ({html_file_path})")
             return "inserted: 0"
 
-        # Sort by hierarchical index (e.g., 3 before 3.1) to ensure parents
-        # are inserted before children.
+        # Sort parents before children (e.g., 3 before 3.1 before 3.1.1)
         assets_sorted = sorted(assets, key=sort_key)
 
-        # Map extracted index -> inserted asset id
+        # Map: extracted index (e.g., "3.1") -> inserted asset_id
         index_to_id: dict[str, int] = {}
         inserted = 0
 
@@ -85,28 +100,25 @@ def process_assets_parsing(html_file_path: str) -> Optional[str]:
             name = (asset.get("name") or "").strip()
             product_type = (asset.get("type") or "Unknown").strip()
             if not name:
-                continue
+                continue  # skip nameless rows
 
             # 1) Ensure product exists and get product_id
             product_id = add_product(
-                {
-                    "name": name,
-                    "type": product_type,
-                },
+                {"name": name, "type": product_type},
                 connection=conn,
                 config=CONFIG,
             )
 
-            # 2) Resolve parent asset id if any
+            # 2) Resolve parent asset id
             parent_idx = asset.get("parent_index")
             parent_asset_id = (
                 index_to_id.get(parent_idx) if parent_idx else None
             )
 
-            # 3) Insert asset
+            # 3) Insert asset row; schema inferred from your SELECT
             asset_row = {
-                "product_id": product_id,
                 "politician_id": politician_id,
+                "product_id": product_id,
                 "owner": asset.get("owner"),
                 "value": asset.get("value"),
                 "income_type": asset.get("income_type"),
@@ -122,12 +134,12 @@ def process_assets_parsing(html_file_path: str) -> Optional[str]:
                 config=CONFIG,
             )
 
+            # Record mapping for children resolution
             idx = asset.get("index")
             if isinstance(idx, str) and idx:
                 index_to_id[idx] = inserted_id
             inserted += 1
 
-        # Commit once
         conn.commit()
         status = f"inserted: {inserted}"
         print(f"Report {report_id}: {status}")
@@ -136,48 +148,54 @@ def process_assets_parsing(html_file_path: str) -> Optional[str]:
         conn.close()
 
 
-def process_reports_assets(folder_path, db_path, project_root) -> None:
+def process_reports_assets(folder_path: str) -> None:
     """
-    Imports assets from HTML report files in a folder and saves them in the
-    database (assets table), one report per file.
+    Import assets from HTML report files stored in a folder and persist them
+    into the database.
 
     Args:
-        folder_path (str or Path): Directory containing .html files
-        db_path (str): Path to the SQLite database (unused, for symmetry)
-        project_root (str or Path): Project root for relative paths (unused)
+        folder_path: Directory containing .html report files.
     """
-    from pathlib import Path
-
     folder = Path(folder_path)
+
+    files = sorted(folder.glob("*.html"))
+
     processed = 0
-    for file in sorted(folder.glob("*.html")):
-        try:
-            report_id = int(file.stem)
-        except Exception:
-            report_id = None
+    succeeded = 0
+    failed = 0
+
+    for file in files:
+        report_id = parse_report_id(file)
 
         try:
             status = process_assets_parsing(str(file))
-            if report_id is not None:
-                print(f"Report {report_id} {status}.")
+
+            # Normalize the printed line
+            label = f"Report {report_id}"
+            if status is None:
+                print(f"{label}: [FAILED]")
+                failed += 1
             else:
-                print(f"{file.name}: {status}")
-        except Exception as e:
-            if report_id is not None:
-                print(f"Error processing report {report_id}: {e}")
-            else:
-                print(f"Error processing {file.name}: {e}")
+                print(f"{label}: {status}")
+                succeeded += 1
+
+        except Exception as exc:
+            # Keep going on individual failures
+            label = f"Report {report_id}"
+            print(f"{label}: [ERROR] {exc}")
+            failed += 1
+
         processed += 1
 
-    print("Import finished.")
+    # Final summary
+    print("\nImport finished.")
+    print(
+        f"Processed: {processed} | Succeeded: {succeeded} | Failed: {failed}"
+    )
 
 
 def main():
-    process_reports_assets(
-        CONFIG.output_folder,
-        CONFIG.db_path,
-        CONFIG.project_root,
-    )
+    process_reports_assets(CONFIG.output_folder)
 
 
 if __name__ == "__main__":

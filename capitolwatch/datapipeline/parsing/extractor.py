@@ -122,11 +122,33 @@ def extract_assets(soup):
         income_type = clean_text(cols[5].get_text())
         income = clean_text(cols[6].get_text())
 
-        # Optionally extract a comment (if present) from <em> tags
+        # Optionally extract a filer comment if present, e.g.:
+        # <div class="muted"><em>Filer comment: </em>Your text...</div>
         comment = ""
-        comment_div = cols[1].find("description")
-        if comment_div:
-            comment = comment_div.get_text(strip=True)
+        try:
+            for div in cols[1].find_all("div", class_="muted"):
+                em = div.find("em")
+                if not em:
+                    continue
+                label = (em.get_text(strip=True) or "").lower()
+                if "filer comment" in label:
+                    # Collect text after the <em> label within this div
+                    parts = []
+                    for sib in em.next_siblings:
+                        try:
+                            text = (
+                                sib if isinstance(sib, str)
+                                else sib.get_text(" ", strip=True)
+                            )
+                        except Exception:
+                            text = None
+                        if text:
+                            parts.append(text.strip())
+                    comment = clean_text(" ".join(p for p in parts if p)) or ""
+                    if comment:
+                        break
+        except Exception:
+            comment = comment or ""
 
         asset = {
             "index": idx,
