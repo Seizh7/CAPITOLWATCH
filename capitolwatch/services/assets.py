@@ -69,13 +69,14 @@ def add_asset(
     *,
     config: Optional[object] = None,
     connection=None,
-) -> bool:
+) -> int:
     """
     Insert a new asset row for a given report and return the inserted row id.
 
     Args:
         report_id (int): Target report ID (foreign key in `assets`).
         asset (dict): Asset information with keys:
+            - politician_id (str, optional, FK to politicians.politician_id)
             - product_id (int, required, FK to products.product_id)
             - owner (str)
             - value (float or str)
@@ -98,13 +99,14 @@ def add_asset(
         cur.execute(
             """
             INSERT INTO assets (
-                report_id, product_id, owner, value,
+                report_id, politician_id, product_id, owner, value,
                 income_type, income, comment, parent_asset_id
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 report_id,
+                asset.get("politician_id"),
                 asset["product_id"],
                 asset.get("owner"),
                 asset.get("value"),
