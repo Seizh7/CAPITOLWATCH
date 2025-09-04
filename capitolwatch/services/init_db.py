@@ -50,14 +50,46 @@ def initialize_database(config):
     )
     """)
 
-    # Describes each unique financial product
+    # Describes each unique financial product with enriched fields
     cur.execute("""
     CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY,         -- Unique ID for the product
-        name TEXT,                              -- Name of the product
-        isin TEXT UNIQUE,                       -- ISIN code
-        type TEXT,                              -- Product type
-        details TEXT                            -- Any additional details
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+
+        -- Financial identifiers
+        figi TEXT,                          -- Bloomberg Global Identifier
+        ticker TEXT,                        -- Main trading symbol
+        exchange TEXT,                      -- Primary exchange
+
+        -- Sector classification
+        sector TEXT,                        -- GICS sector
+        industry TEXT,                      -- GICS industry
+        country TEXT,                       -- Country of origin
+        asset_class TEXT,                   -- Asset class (EQUITY, ETF, etc.)
+
+        -- Financial metrics
+        beta REAL,                          -- Beta coefficient vs. market
+        dividend_yield REAL,                -- Annual dividend yield (%)
+        expense_ratio REAL,                 -- Expense ratio (for funds)
+        market_cap BIGINT,                  -- Market capitalization
+
+        -- Trading metadata
+        currency TEXT DEFAULT 'USD',        -- Main currency
+        is_etf BOOLEAN DEFAULT 0,           -- ETF flag
+        is_mutual_fund BOOLEAN DEFAULT 0,   -- Mutual fund flag
+        is_index_fund BOOLEAN DEFAULT 0,    -- Index fund flag
+
+        -- Computed classification
+        market_cap_tier TEXT,               -- Size (Large/Mid/Small/Micro)
+        risk_rating TEXT,                   -- Risk level
+
+        -- Enrichment metadata
+        last_updated TEXT,                  -- Last update timestamp
+        data_source TEXT,                   -- Data source (e.g., API, Manual)
+
+        -- Constraints
+        UNIQUE(name, type)                  -- Prevent duplicates
     )
     """)
 
@@ -80,6 +112,24 @@ def initialize_database(config):
         FOREIGN KEY (parent_asset_id) REFERENCES assets(id)
     )
     """)
+
+    # Create indexes for better query performance
+    indexes = [
+        ("idx_products_sector", "products", "sector"),
+        ("idx_products_asset_class", "products", "asset_class"),
+        ("idx_products_ticker", "products", "ticker"),
+        ("idx_products_risk_rating", "products", "risk_rating"),
+        ("idx_products_name_type", "products", "name, type"),
+        ("idx_assets_product_id", "assets", "product_id"),
+        ("idx_assets_politician_id", "assets", "politician_id"),
+        ("idx_assets_report_id", "assets", "report_id")
+    ]
+
+    for index_name, table, columns in indexes:
+        cur.execute(
+            f"CREATE INDEX IF NOT EXISTS {index_name} "
+            f"ON {table}({columns});"
+        )
 
     print(f"Database initialized at {config.db_path.absolute()}")
     conn.commit()
