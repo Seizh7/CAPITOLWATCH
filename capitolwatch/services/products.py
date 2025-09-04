@@ -119,7 +119,7 @@ def get_products_without_enrichment(
             """
             SELECT id, name, type
             FROM products
-            WHERE data_source IS NULL
+            WHERE data_source = 'Manual' AND ticker IS NULL
             """
         )
         return [dict(r) for r in cur.fetchall()]
