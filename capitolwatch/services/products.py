@@ -2,11 +2,10 @@
 Product services: CRUD and helpers for the products table.
 
 Implements add_product returning a generated INTEGER PRIMARY KEY id,
-with optional ISIN and details, plus a function to update ISIN/details.
+with enrichment support for OpenFIGI and Yahoo Finance data.
 """
 
 from typing import Optional
-import sqlite3
 
 from capitolwatch.db import get_connection
 from config import CONFIG
@@ -14,35 +13,35 @@ from config import CONFIG
 
 # ---------- Utilities ----------
 
-def normalize_isin(isin: Optional[str]) -> Optional[str]:
+def normalize_ticker(ticker: Optional[str]) -> Optional[str]:
     """
-    Normalize an ISIN by removing spaces and uppercasing.
+    Normalize a ticker by removing spaces and uppercasing.
     """
-    if isin is None:
+    if ticker is None:
         return None
-    return isin.replace(" ", "").upper().strip()
+    return ticker.replace(" ", "").upper().strip()
 
 
 # ---------- Read API (get*) ----------
 
-def get_id_by_isin(
-    isin: str,
+def get_id_by_ticker(
+    ticker: str,
     *,
     config: Optional[object] = None,
     connection=None,
 ) -> Optional[int]:
     """
-    Return a id given an ISIN (exact match after normalization).
+    Return a id given a ticker.
 
     Args:
-        isin: Product ISIN (case-insensitive).
+        ticker: Product ticker symbol.
         config: Optional config override.
         connection: Optional existing DB connection to reuse.
 
     Returns:
         The id if found, else None.
     """
-    isin = normalize_isin(isin)
+    ticker = normalize_ticker(ticker)
 
     close = False
     if connection is None:
@@ -51,8 +50,8 @@ def get_id_by_isin(
     try:
         cur = connection.cursor()
         cur.execute(
-            "SELECT id FROM products WHERE isin = ? LIMIT 1",
-            (isin,),
+            "SELECT id FROM products WHERE ticker = ? LIMIT 1",
+            (ticker,),
         )
         row = cur.fetchone()
         return int(row["id"]) if row else None
@@ -70,7 +69,7 @@ def get_product(
     """
     Fetch a single product by its primary key.
 
-    Returns: {id, name, isin, type, details} or None
+    Returns: Full product dict or None
     """
     close = False
     if connection is None:
@@ -79,7 +78,10 @@ def get_product(
         cur = connection.cursor()
         cur.execute(
             """
-            SELECT id, name, isin, type, details
+            SELECT id, name, type, figi, ticker, exchange, sector, industry,
+                   country, asset_class, beta, dividend_yield, expense_ratio,
+                   market_cap, currency, is_etf, is_mutual_fund, is_index_fund,
+                   market_cap_tier, risk_rating, last_updated, data_source
             FROM products
             WHERE id = ?
             """,
@@ -92,13 +94,13 @@ def get_product(
             connection.close()
 
 
-def get_products_without_isin(
+def get_products_without_enrichment(
     *,
     config: Optional[object] = None,
     connection=None
 ) -> list[dict]:
     """
-    Retrieve all products that have no ISIN set (NULL or empty string).
+    Retrieve all products that have no enrichment data.
 
     Args:
         config: Optional config override (defaults to global CONFIG).
@@ -117,7 +119,7 @@ def get_products_without_isin(
             """
             SELECT id, name, type
             FROM products
-            WHERE isin IS NULL OR isin = ''
+            WHERE data_source IS NULL
             """
         )
         return [dict(r) for r in cur.fetchall()]
@@ -140,15 +142,12 @@ def add_product(
     Expected keys in `product`:
       - name (str, required)
       - type (str, required)
-      - isin (str, optional)
-      - details (str, optional)
+      - All other fields are optional (figi, ticker, etc.)
 
     Behavior:
       - Uses INTEGER PRIMARY KEY auto-generation for id.
-      - ISIN is optional. If provided, it is normalized and must be unique.
-      - Details is optional.
-      - If a conflicting row already exists (same ISIN or same (name,type)
-        when ISIN is missing), the existing id is returned.
+      - If a conflicting row already exists (same name,type),
+        the existing id is returned.
 
     Returns:
       id (int)
@@ -162,15 +161,15 @@ def add_product(
     if not name or not product_type:
         raise ValueError("'name' and 'type' are required to create a product")
 
-    isin = normalize_isin(product.get("isin"))
-    details = product.get("details")
+    ticker = normalize_ticker(product.get("ticker"))
 
     try:
         cur = connection.cursor()
 
-        if isin:
-            existing_id = get_id_by_isin(
-                isin, config=config, connection=connection
+        # Check for existing by ticker first (if provided)
+        if ticker:
+            existing_id = get_id_by_ticker(
+                ticker, config=config, connection=connection
             )
             if existing_id is not None:
                 return existing_id
@@ -187,13 +186,13 @@ def add_product(
         if row:
             return int(row["id"])
 
-        # Insert new product
+        # Insert new product with basic fields only
         cur.execute(
             """
-            INSERT INTO products (name, type, isin, details)
+            INSERT INTO products (name, type, ticker, data_source)
             VALUES (?, ?, ?, ?)
             """,
-            (name, product_type, isin, details),
+            (name, product_type, ticker, "Manual"),
         )
         new_id = int(cur.lastrowid)
         if close:
@@ -204,58 +203,55 @@ def add_product(
             connection.close()
 
 
-def update_product(
-    id: int,
+def enrich_product(
+    product_id: int,
+    enrichment_data: dict,
     *,
-    isin: Optional[str] = None,
-    details: Optional[str] = None,
     config: Optional[object] = None,
     connection=None,
 ) -> bool:
     """
-    Update a product to add/set its ISIN and/or details.
+    Enrich a product with API data from OpenFIGI and Yahoo Finance.
 
     Args:
-        id: Target product id to update.
-        isin: Optional ISIN to set (normalized, must be unique if provided).
-        details: Optional free-form details.
+        product_id: Target product id to enrich.
+        enrichment_data: Dict with enrichment fields (figi, sector, etc.)
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
 
     Returns:
-        True if at least one column was updated, False otherwise.
-
-    Raises:
-        ValueError on invalid input or ISIN uniqueness conflicts.
+        True if product was updated, False otherwise.
     """
-    if isin is None and details is None:
-        return False
-
     close = False
     if connection is None:
         connection, close = get_connection(config or CONFIG), True
 
     try:
+        # Build dynamic UPDATE statement based on provided fields
+        valid_fields = {
+            'figi', 'ticker', 'exchange', 'sector', 'industry', 'country',
+            'asset_class', 'beta', 'dividend_yield', 'expense_ratio',
+            'market_cap', 'currency', 'is_etf', 'is_mutual_fund',
+            'is_index_fund', 'market_cap_tier', 'risk_rating',
+            'last_updated', 'data_source'
+        }
+
         sets = []
-        params: list[object] = []
+        params = []
 
-        if isin is not None:
-            norm_isin = normalize_isin(isin)
-            sets.append("isin = ?")
-            params.append(norm_isin)
+        for field, value in enrichment_data.items():
+            if field in valid_fields and value is not None:
+                sets.append(f"{field} = ?")
+                params.append(value)
 
-        if details is not None:
-            sets.append("details = ?")
-            params.append(details)
+        if not sets:
+            return False
 
-        params.append(id)
-
+        params.append(product_id)
         sql = f"UPDATE products SET {', '.join(sets)} WHERE id = ?"
 
         cur = connection.cursor()
-        try:
-            cur.execute(sql, tuple(params))
-        except sqlite3.IntegrityError as e:
-            # Likely ISIN UNIQUE constraint violation
-            raise ValueError(str(e))
+        cur.execute(sql, tuple(params))
 
         updated = cur.rowcount > 0
         if close:
