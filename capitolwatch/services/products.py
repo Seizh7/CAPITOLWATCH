@@ -128,6 +128,71 @@ def get_products_without_enrichment(
             connection.close()
 
 
+def get_geographic_enrichment_stats(
+    *,
+    config: Optional[object] = None,
+    connection=None
+) -> dict:
+    """
+    Get geographic enrichment statistics for products.
+
+    Returns:
+        dict: Statistics about geographic enrichment coverage.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+
+        # Basic statistics
+        cur.execute('''
+            SELECT
+                COUNT(*) as total_products,
+                COUNT(international_exposure) as geo_enriched,
+                COUNT(geographic_classification) as region_classified
+            FROM products
+            WHERE ticker IS NOT NULL AND ticker != "Manual"
+        ''')
+
+        total, geo_enriched, region_classified = cur.fetchone()
+
+        # Distribution by region
+        cur.execute('''
+            SELECT
+                geographic_classification,
+                COUNT(*) as count
+            FROM products
+            WHERE geographic_classification IS NOT NULL
+            GROUP BY geographic_classification
+            ORDER BY count DESC
+        ''')
+
+        regions = dict(cur.fetchall())
+
+        return {
+            'total_products': total,
+            'geo_enriched': geo_enriched,
+            'region_classified': region_classified,
+            'regions': regions,
+            'coverage_rate': (geo_enriched / total * 100) if total > 0 else 0
+        }
+
+    except Exception as e:
+        return {
+            'error': str(e),
+            'total_products': 0,
+            'geo_enriched': 0,
+            'region_classified': 0,
+            'regions': {},
+            'coverage_rate': 0
+        }
+    finally:
+        if close:
+            connection.close()
+
+
 # ---------- Write API (add*/update*) ----------
 
 def add_product(
@@ -212,6 +277,7 @@ def enrich_product(
 ) -> bool:
     """
     Enrich a product with API data from OpenFIGI and Yahoo Finance.
+    Includes automatic geographic enrichment when applicable.
 
     Args:
         product_id: Target product id to enrich.
@@ -233,7 +299,8 @@ def enrich_product(
             'asset_class', 'beta', 'dividend_yield', 'expense_ratio',
             'market_cap', 'currency', 'is_etf', 'is_mutual_fund',
             'is_index_fund', 'market_cap_tier', 'risk_rating',
-            'last_updated', 'data_source'
+            'last_updated', 'data_source', 'international_exposure',
+            'geographic_classification'
         }
 
         sets = []

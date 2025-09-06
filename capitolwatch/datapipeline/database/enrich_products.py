@@ -3,8 +3,9 @@
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
 """
-Pipeline for financial product enrichment using OpenFIGI and Yahoo Finance.
-Enhances database products with financial metadata.
+Pipeline for comprehensive product enrichment using financial and geographic
+data.
+Enhances database products with financial metadata and geographic information.
 """
 
 import re
@@ -15,11 +16,14 @@ import yfinance as yf
 from datetime import datetime, timezone
 from typing import Optional, Dict
 
-from config.development import Config
+from config import CONFIG
 from capitolwatch.db import get_connection
 from capitolwatch.services.products import (
     get_products_without_enrichment,
     enrich_product
+)
+from capitolwatch.datapipeline.database.geographic_enrichment import (
+    classify_product_geography
 )
 
 
@@ -249,126 +253,156 @@ def enrich_single_product(
     openfigi_session: requests.Session
 ) -> Dict:
     """
-    Enriches a single product.
+    Enrich a single product with financial and geographic data.
 
     Args:
         product (Dict): Product dictionary with 'id', 'name', 'type'.
         openfigi_session (requests.Session): OpenFIGI HTTP session.
+
     Returns:
         Dict: Enrichment data.
     """
     product_id = product['id']
     name = product['name']
 
-    print(f"[{product_id}] Product: {name}")
+    print(f"[{product_id}] Processing product: {name}")
 
-    # Ticker extraction
+    # Initialize enrichment data
+    enrichment = {
+        'last_updated': datetime.now(timezone.utc).isoformat()
+    }
+
+    # --- Ticker extraction ---
     ticker = extract_ticker(name)
     if not ticker:
-        print("  No extractable ticker - marked as non-tradeable")
-        return {
-            'data_source': 'Manual_NonTradeable',
-            'last_updated': datetime.now(timezone.utc).isoformat()
-        }
+        print("  No extractable ticker -> marked as non-tradeable")
+        enrichment['data_source'] = 'Manual_NonTradeable'
 
-    print(f"  Ticker: {ticker}")
+        # Attempt geographic enrichment even for non-tradeable products
+        try:
+            geo_data = classify_product_geography(name)
+            if geo_data:
+                enrichment.update(geo_data)
+                print("  Geographic enrichment applied")
+        except Exception as e:
+            print(f"  Geographic enrichment failed: {e}")
 
-    # Data retrieval
+        return enrichment
+
+    print(f"  Extracted ticker: {ticker}")
+    enrichment['ticker'] = ticker
+
+    # --- Financial data retrieval ---
     openfigi_data = get_openfigi_security_info(openfigi_session, ticker)
     yahoo_data = get_yahoo_security_info(ticker)
 
     openfigi_success = openfigi_data is not None
     yahoo_success = yahoo_data is not None
 
-    status = (
-        "Both sources OK" if openfigi_success and yahoo_success
-        else "Partial success" if openfigi_success or yahoo_success
-        else "Failed"
-    )
+    if openfigi_success and yahoo_success:
+        status = "Both sources available"
+    elif openfigi_success or yahoo_success:
+        status = "Partial success"
+    else:
+        status = "No data available"
+
     print(
-        (
-            f"  Status: {status} | OpenFIGI: {'OK' if openfigi_success else 'Failed'} | "
-            f"Yahoo: {'OK' if yahoo_success else 'Failed'}"
-        )
+        f"  Financial status: {status} "
+        f"(OpenFIGI: {'OK' if openfigi_success else 'Failed'} | "
+        f"Yahoo: {'OK' if yahoo_success else 'Failed'})"
     )
 
     if not openfigi_success and not yahoo_success:
-        return {
-            'ticker': ticker,
-            'data_source': 'API_Failed',
-            'last_updated': datetime.now(timezone.utc).isoformat()
-        }
+        enrichment['data_source'] = 'API_Failed'
+    else:
+        enrichment['data_source'] = 'OpenFIGI+Yahoo'
 
-    # Build enrichment data
-    enrichment = {
-        'ticker': ticker,
-        'last_updated': datetime.now(timezone.utc).isoformat(),
-        'data_source': 'OpenFIGI+Yahoo'
-    }
-    # OpenFIGI data
-    if openfigi_data:
-        enrichment.update({
-            'figi': openfigi_data.get('figi'),
-            'exchange': openfigi_data.get('exchange')
-        })
-    # Yahoo Finance data
-    if yahoo_data:
-        enrichment.update({
-            'sector': yahoo_data.get('sector'),
-            'industry': yahoo_data.get('industry'),
-            'country': yahoo_data.get('country'),
-            'currency': yahoo_data.get('currency', 'USD'),
-            'market_cap': yahoo_data.get('market_cap'),
-            'beta': yahoo_data.get('beta'),
-            'dividend_yield': yahoo_data.get('dividend_yield'),
-            'expense_ratio': yahoo_data.get('expense_ratio')
-        })
-    # Calculated classifications
-    asset_class = classify_asset_class(openfigi_data or {}, yahoo_data or {})
-    enrichment['asset_class'] = asset_class
+        # Add OpenFIGI data
+        if openfigi_data:
+            enrichment.update({
+                'figi': openfigi_data.get('figi'),
+                'exchange': openfigi_data.get('exchange')
+            })
 
-    market_cap_tier = calculate_market_cap_tier(enrichment.get('market_cap'))
-    if market_cap_tier:
-        enrichment['market_cap_tier'] = market_cap_tier
+        # Add Yahoo Finance data
+        if yahoo_data:
+            enrichment.update({
+                'sector': yahoo_data.get('sector'),
+                'industry': yahoo_data.get('industry'),
+                'country': yahoo_data.get('country'),
+                'currency': yahoo_data.get('currency', 'USD'),
+                'market_cap': yahoo_data.get('market_cap'),
+                'beta': yahoo_data.get('beta'),
+                'dividend_yield': yahoo_data.get('dividend_yield'),
+                'expense_ratio': yahoo_data.get('expense_ratio')
+            })
 
-    risk_rating = calculate_risk_rating(
-        enrichment.get('sector', ''),
-        asset_class,
-        enrichment.get('beta')
-    )
-    enrichment['risk_rating'] = risk_rating
+        # Derived classifications
+        asset_class = classify_asset_class(
+            openfigi_data or {},
+            yahoo_data or {}
+        )
+        enrichment['asset_class'] = asset_class
 
-    # Fund flags
-    fund_flags = determine_fund_flags(name, asset_class)
-    enrichment.update(fund_flags)
+        market_cap_tier = calculate_market_cap_tier(
+            enrichment.get('market_cap')
+        )
+        if market_cap_tier:
+            enrichment['market_cap_tier'] = market_cap_tier
+
+        risk_rating = calculate_risk_rating(
+            enrichment.get('sector', ''),
+            asset_class,
+            enrichment.get('beta')
+        )
+        enrichment['risk_rating'] = risk_rating
+
+        # Fund flags
+        enrichment.update(determine_fund_flags(name, asset_class))
+
+    # --- Geographic enrichment ---
+    try:
+        geo_data = classify_product_geography(name)
+        if geo_data:
+            enrichment.update(geo_data)
+            print("  Geographic enrichment applied")
+
+            # Update data source to reflect both financial and geographic
+            if enrichment['data_source'] != 'API_Failed':
+                enrichment['data_source'] = (
+                    enrichment['data_source'] + '+Geographic'
+                )
+    except Exception as e:
+        print(f"  Geographic enrichment failed: {e}")
 
     return enrichment
 
 
 def run_enrichment_pipeline(
-    config: Config,
     limit: Optional[int] = None,
     start_from: int = 0
 ) -> Dict:
     """
-    Runs the financial product enrichment pipeline.
+    Run the comprehensive product enrichment pipeline with financial and
+    geographic data.
 
     Args:
-        config (Config): Application configuration.
-        limit (Optional[int]): Maximum number of products to process.
-        start_from (int): Starting index.
+        limit (Optional[int]): Maximum number of products to process. Defaults
+        to None.
+        start_from (int): Starting index. Defaults to 0.
+
     Returns:
-        Dict: Statistics dictionary.
+        Dict: Statistics dictionary containing counts and processing metadata.
     """
-    print("STARTING PRODUCT ENRICHMENT PIPELINE")
+    print("Starting comprehensive product enrichment pipeline")
 
     # Retrieve products to enrich
-    conn = get_connection(config)
+    conn = get_connection(CONFIG)
     products = get_products_without_enrichment(connection=conn)
     conn.close()
 
     total_products = len(products)
-    print(f"{total_products} products to enrich")
+    print(f"{total_products} products to process")
 
     if start_from > 0:
         products = products[start_from:]
@@ -379,26 +413,31 @@ def run_enrichment_pipeline(
         print(f"Limiting to {limit} products")
 
     # Create OpenFIGI session
-    openfigi_session = get_openfigi_session(config.openfigi_api_key)
+    openfigi_session = get_openfigi_session(CONFIG.openfigi_api_key)
 
-    # Statistics
+    # Initialize statistics
     stats = {
         'total_processed': 0,
         'enriched': 0,
         'failed': 0,
         'non_tradeable': 0,
+        'geographic_enriched': 0,
         'start_time': datetime.now()
     }
 
     # Processing loop
     for i, product in enumerate(products, 1):
-        print(f"\n[{i}/{len(products)}]", end=" ")
+        print(f"\n[{i}/{len(products)}] Processing product {product['id']}")
 
         try:
-            enrichment_data = enrich_single_product(product, openfigi_session)
+            # Perform enrichment (financial + geographic)
+            enrichment_data = enrich_single_product(
+                product,
+                openfigi_session
+            )
 
             # Update in database
-            conn = get_connection(config)
+            conn = get_connection(CONFIG)
             success = enrich_product(
                 product['id'],
                 enrichment_data,
@@ -408,34 +447,36 @@ def run_enrichment_pipeline(
             conn.close()
 
             if success:
-                data_source = enrichment_data.get('data_source')
+                data_source = enrichment_data.get('data_source', '')
                 if data_source == 'Manual_NonTradeable':
                     stats['non_tradeable'] += 1
-                elif data_source == 'API_Failed':
+                elif 'Failed' in data_source:
                     stats['failed'] += 1
                 else:
                     stats['enriched'] += 1
+                    if 'Geographic' in data_source:
+                        stats['geographic_enriched'] += 1
             else:
                 stats['failed'] += 1
                 print("  Database update failed")
 
         except Exception as e:
-            print(f"  Error: {e}")
+            print(f"  Error during enrichment: {e}")
             stats['failed'] += 1
 
         stats['total_processed'] += 1
 
-        # Rate limiting
+        # Rate limiting to avoid API overload
         time.sleep(0.5)
 
     # Final report
     duration = datetime.now() - stats['start_time']
 
-    print(f"\n\n{'='*60}")
-    print("PRODUCT ENRICHMENT REPORT")
+    print("\nComprehensive Product Enrichment Report")
     print(f"Duration: {duration}")
     print(f"Total processed: {stats['total_processed']}")
     print(f"Successfully enriched: {stats['enriched']}")
+    print(f"Geographic enriched: {stats['geographic_enriched']}")
     print(f"Non-tradeable: {stats['non_tradeable']}")
     print(f"Failures: {stats['failed']}")
 
@@ -448,41 +489,29 @@ def run_enrichment_pipeline(
 
 def main():
     """
-    Main entry point.
+    Main entry point for the enrichment pipeline.
     """
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Financial Product Enrichment Pipeline"
-    )
-    parser.add_argument('--limit', type=int,
-                        help="Maximum number of products to process")
-    parser.add_argument('--start-from', type=int, default=0,
-                        help="Starting index")
-    parser.add_argument('--test', action='store_true',
-                        help="Test mode (first 10 products only)")
-
-    args = parser.parse_args()
-
-    config = Config()
-    limit = 10 if args.test else args.limit
-
     try:
-        run_enrichment_pipeline(
-            config=config,
-            limit=limit,
-            start_from=args.start_from
+        stats = run_enrichment_pipeline(
+            limit=None,   # No limit by default
+            start_from=0
         )
-        print("\nEnrichment completed!")
+
+        print("\nEnrichment completed successfully")
+        print(
+            f"Final stats: {stats['enriched']} enriched, "
+            f"{stats['failed']} failed"
+        )
 
     except KeyboardInterrupt:
-        print("\n\nEnrichment interrupted by user")
+        print("\nEnrichment interrupted by user")
+        return 1
     except Exception as e:
-        print(f"\n\nFatal error: {e}")
+        print(f"\nFatal error: {e}")
         return 1
 
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    main()
