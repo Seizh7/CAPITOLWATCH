@@ -213,3 +213,55 @@ def add_politicians(
     finally:
         if close:
             connection.close()
+
+
+def get_politician_basic_info(
+    politician_id: str,
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> Optional[dict]:
+    """
+    Get basic information about a politician.
+
+    Args:
+        politician_id: ID of the politician
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        Dict with politician info or None if not found
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                id,
+                first_name,
+                last_name,
+                party,
+                (first_name || ' ' || last_name) as full_name
+            FROM politicians
+            WHERE id = ?
+            """,
+            (politician_id,),
+        )
+        row = cur.fetchone()
+
+        if row:
+            return {
+                'politician_id': row['id'],
+                'politician_name': row['full_name'],
+                'party': row['party'],
+                'first_name': row['first_name'],
+                'last_name': row['last_name']
+            }
+        return None
+    finally:
+        if close:
+            connection.close()
