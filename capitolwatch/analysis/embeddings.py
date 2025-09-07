@@ -21,6 +21,7 @@ from capitolwatch.services.product_embeddings import (
     store_embeddings, get_embeddings
 )
 from capitolwatch.services.products import get_all_products_for_embeddings
+from config import CONFIG
 
 # ML libraries for embeddings
 try:
@@ -589,3 +590,100 @@ def compare_methods(config, methods: List[str]) -> Dict:
             }
 
     return comparison
+
+
+def generate_embeddings_for_method(config, method: str) -> Dict:
+    """
+    Generate embeddings for a single method.
+
+    Args:
+        config: Database configuration
+        method: Embedding method name
+
+    Returns:
+        Dict containing status and metadata
+    """
+    # Skip if gensim/nltk is required but not available
+    if method in ["word2vec", "glove"] and not GENSIM_AVAILABLE:
+        return {
+            "status": "skipped",
+            "reason": "gensim/nltk not available"
+        }
+
+    try:
+        result = generate_embeddings_for_all_products(config, method=method)
+        if not result:
+            return {
+                "status": "failed",
+                "reason": "No result returned"
+            }
+
+        return {
+            "status": "success",
+            "product_count": result["product_count"],
+            "embedding_dimension": result["embedding_dimension"],
+            "features_used": result["features_used"],
+            "metadata": result["metadata"],
+        }
+    except Exception as exc:
+        return {
+            "status": "error",
+            "error": str(exc),
+        }
+
+
+def generate_all_embeddings(config) -> Dict:
+    """
+    Generate embeddings for all supported methods.
+
+    Args:
+        config: Database configuration
+
+    Returns:
+        Dict with results for each method
+    """
+    results: Dict[str, Dict] = {}
+
+    print("Generating embeddings for all supported methods")
+
+    for method in SUPPORTED_METHODS:
+        print(f"\nMethod: {method}")
+        result = generate_embeddings_for_method(config, method)
+
+        results[method] = result
+        status = result["status"]
+
+        if status == "success":
+            print(f"Generated {method} embeddings successfully")
+            print(f"  - Products: {result['product_count']}")
+            print(f"  - Dimensions: {result['embedding_dimension']}")
+        elif status == "skipped":
+            print(f"Skipped {method} ({result['reason']})")
+        elif status == "failed":
+            print(
+                f"Failed to generate {method} embeddings "
+                f"({result['reason']})"
+            )
+        elif status == "error":
+            print(f"Error generating {method} embeddings: {result['error']}")
+
+    # Print summary
+    print("\n" + "=" * 60)
+    print("SUMMARY")
+    success_count = sum(
+        1 for r in results.values() if r["status"] == "success"
+    )
+    print(f"Successful methods: {success_count}/{len(SUPPORTED_METHODS)}\n")
+
+    for method, result in results.items():
+        status = result["status"].upper()
+        print(f"{method}: {status}")
+        if status == "SUCCESS":
+            print(f"  -> {result['product_count']} products, "
+                  f"{result['embedding_dimension']} dimensions")
+
+    return results
+
+
+if __name__ == "__main__":
+    results = generate_all_embeddings(CONFIG)
