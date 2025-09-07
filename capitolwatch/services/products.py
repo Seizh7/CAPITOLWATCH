@@ -193,6 +193,42 @@ def get_geographic_enrichment_stats(
             connection.close()
 
 
+def get_all_products_for_embeddings(
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> list[dict]:
+    """
+    Retrieve all products from database for embedding generation.
+
+    Args:
+        config: Optional config override (defaults to global CONFIG).
+        connection: Optional existing SQLite connection to reuse.
+
+    Returns:
+        list[dict]: List of products with all relevant fields for embeddings.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute("""
+            SELECT id, name, type, sector, industry, asset_class,
+                   country, market_cap, beta, dividend_yield, expense_ratio,
+                   market_cap_tier, risk_rating, currency,
+                   is_etf, is_mutual_fund, is_index_fund
+            FROM products
+            ORDER BY id
+        """)
+        rows = cur.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        if close:
+            connection.close()
+
+
 # ---------- Write API (add*/update*) ----------
 
 def add_product(
