@@ -363,3 +363,73 @@ def enrich_product(
     finally:
         if close:
             connection.close()
+
+
+def get_all_sectors(
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> list:
+    """
+    Get list of all unique sectors in the database.
+
+    Args:
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        Sorted list of sector names
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            """
+            SELECT DISTINCT sector
+            FROM products
+            WHERE sector IS NOT NULL
+            ORDER BY sector
+            """
+        )
+        return [row['sector'] for row in cur.fetchall()]
+    finally:
+        if close:
+            connection.close()
+
+
+def get_all_industries(
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> list:
+    """
+    Get list of all unique industries in the database.
+
+    Args:
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        Sorted list of industry names
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            """
+            SELECT DISTINCT industry
+            FROM products
+            WHERE industry IS NOT NULL
+            ORDER BY industry
+            """
+        )
+        return [row['industry'] for row in cur.fetchall()]
+    finally:
+        if close:
+            connection.close()
