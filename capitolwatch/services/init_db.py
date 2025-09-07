@@ -113,6 +113,21 @@ def initialize_database(config):
     )
     """)
 
+    # Stores vectorized representations of products for ML clustering
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS product_embeddings (
+        product_id INTEGER,                     -- Foreign key to products
+        embedding BLOB NOT NULL,                -- Serialized vector
+        method TEXT NOT NULL,                   -- Embedding method
+        features_used TEXT,                     -- JSON list of features
+        vector_dimension INTEGER,               -- Dimension of vector
+        updated_at TEXT,                        -- Creation timestamp
+        metadata TEXT,                          -- Additional metadata (JSON)
+        PRIMARY KEY (product_id, method),
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    )
+    """)
+
     # Create indexes for better query performance
     indexes = [
         ("idx_products_sector", "products", "sector"),
@@ -122,7 +137,9 @@ def initialize_database(config):
         ("idx_products_name_type", "products", "name, type"),
         ("idx_assets_product_id", "assets", "product_id"),
         ("idx_assets_politician_id", "assets", "politician_id"),
-        ("idx_assets_report_id", "assets", "report_id")
+        ("idx_assets_report_id", "assets", "report_id"),
+        ("idx_embeddings_method", "product_embeddings", "method"),
+        ("idx_embeddings_updated", "product_embeddings", "updated_at")
     ]
 
     for index_name, table, columns in indexes:
