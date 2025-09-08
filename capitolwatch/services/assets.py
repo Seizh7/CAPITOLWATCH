@@ -61,6 +61,49 @@ def get_assets_for_report(
             connection.close()
 
 
+def get_politician_assets(
+    politician_id: int,
+    *,
+    config: Optional[object] = None
+) -> list[dict]:
+    """
+    Retrieve all financial assets for a given politician.
+
+    Args:
+        politician_id (int): Target politician ID.
+        config (Optional[object]): Optional config override.
+
+    Returns:
+        list[dict]: List of asset rows with fields:
+            - id: asset ID
+            - product_id: product ID
+            - value: asset value
+            - owner: asset owner
+            - income_type: type of income
+            - product_name: name of the product
+            - product_type: type of product
+    """
+    if config is None:
+        config = CONFIG
+
+    with get_connection(config) as conn:
+        cur = conn.execute(
+            """
+            SELECT a.id, a.product_id, a.value, a.owner, a.income_type,
+                   a.income, a.comment,
+                   pr.name AS product_name,
+                   pr.type AS product_type,
+                   pr.isin
+            FROM assets a
+            JOIN products pr ON a.product_id = pr.id
+            WHERE a.politician_id = ? AND a.value > 0
+            ORDER BY a.value DESC
+            """,
+            (politician_id,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
 # ---------- Write API (add*) ----------
 
 def add_asset(
