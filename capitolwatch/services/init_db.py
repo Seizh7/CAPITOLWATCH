@@ -128,6 +128,23 @@ def initialize_database(config):
     )
     """)
 
+    # Stores vectorized representations of politician portfolios for analysis
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS portfolio_embeddings (
+        politician_id VARCHAR(7) NOT NULL,      -- Foreign key to politicians
+        method TEXT NOT NULL,                   -- Embedding method
+        embedding BLOB NOT NULL,                -- Serialized vector
+        vector_dimension INTEGER NOT NULL,      -- Dimension of vector
+        features_used TEXT,                     -- JSON list of features used
+        asset_count INTEGER,                    -- Number of assets
+        total_value REAL,                       -- Total portfolio value
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        metadata TEXT,                          -- Additional metadata (JSON)
+        PRIMARY KEY (politician_id, method),
+        FOREIGN KEY (politician_id) REFERENCES politicians (id)
+    )
+    """)
+
     # Create indexes for better query performance
     indexes = [
         ("idx_products_sector", "products", "sector"),
@@ -139,7 +156,10 @@ def initialize_database(config):
         ("idx_assets_politician_id", "assets", "politician_id"),
         ("idx_assets_report_id", "assets", "report_id"),
         ("idx_embeddings_method", "product_embeddings", "method"),
-        ("idx_embeddings_updated", "product_embeddings", "updated_at")
+        ("idx_embeddings_updated", "product_embeddings", "updated_at"),
+        ("idx_portfolio_embeddings_method", "portfolio_embeddings", "method"),
+        ("idx_portfolio_embeddings_created", "portfolio_embeddings", 
+         "created_at")
     ]
 
     for index_name, table, columns in indexes:

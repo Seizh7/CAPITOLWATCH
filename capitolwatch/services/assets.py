@@ -104,6 +104,44 @@ def get_politician_assets(
         return [dict(r) for r in cur.fetchall()]
 
 
+def get_politician_assets_simple(
+    politician_id: int,
+    *,
+    config: Optional[object] = None
+) -> list[dict]:
+    """
+    Retrieve simple asset data (product_id, value) for a given politician.
+
+    This function is optimized for embedding computation and returns
+    only the essential fields without joining with products table.
+
+    Args:
+        politician_id (int): Target politician ID.
+        config (Optional[object]): Optional config override.
+
+    Returns:
+        list[dict]: List of asset rows with fields:
+            - product_id: product ID
+            - value: asset value
+    """
+    if config is None:
+        config = CONFIG
+
+    with get_connection(config) as conn:
+        cur = conn.execute(
+            """
+            SELECT product_id, value
+            FROM assets
+            WHERE politician_id = ? 
+              AND value IS NOT NULL 
+              AND value != ''
+            ORDER BY id
+            """,
+            (politician_id,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
 # ---------- Write API (add*) ----------
 
 def add_asset(
