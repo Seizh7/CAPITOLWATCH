@@ -11,6 +11,8 @@ the CAPITOLWATCH database with the following steps:
 2. Report collection via scraping
 3. Report import from local folder (optional)
 4. Politician-to-report matching
+5. Report asset parsing and extraction
+6. Product enrichment with financial data
 """
 
 import argparse
@@ -25,6 +27,12 @@ from capitolwatch.datapipeline.scraping.main import main as scraping_main
 from capitolwatch.datapipeline.database.import_reports import import_reports
 from capitolwatch.datapipeline.database.matching_workflow import (
     main as matching_main
+)
+from capitolwatch.datapipeline.database.parse_report_assets import (
+    process_reports_assets
+)
+from capitolwatch.datapipeline.database.enrich_products import (
+    run_enrichment_pipeline
 )
 
 
@@ -73,7 +81,7 @@ def step_2_scrape_reports():
 
 def step_3_import_reports(folder_path=None):
     """
-    Step 3: Import reports from local folder.
+    Step 3: Import reports from local folder if they are already downloaded.
 
     Args:
         folder_path: Path to folder containing HTML reports
@@ -142,6 +150,77 @@ def step_4_match_politicians():
         return None
 
 
+def step_5_parse_assets(folder_path=None):
+    """
+    Step 5: Parse assets from HTML reports and insert into database.
+
+    Args:
+        folder_path: Path to folder containing HTML reports
+    """
+    print("=" * 60)
+    print("STEP 5: REPORT ASSET PARSING")
+    print("=" * 60)
+
+    if folder_path is None:
+        folder_path = CONFIG.output_folder
+
+    folder = Path(folder_path)
+    if not folder.exists():
+        print(f"ERROR: Folder not found: {folder_path}")
+        return False
+
+    html_files = list(folder.glob("*.html"))
+    if not html_files:
+        print(f"ERROR: No HTML files found in: {folder_path}")
+        return False
+
+    print(f"Source folder: {folder_path}")
+    print(f"HTML files found: {len(html_files)}")
+    print("Parsing assets and products from reports...")
+
+    try:
+        process_reports_assets(folder_path)
+        print("\nSTEP 5 COMPLETED: Report assets parsed and imported\n")
+        return True
+    except Exception as e:
+        print(f"\nERROR during asset parsing: {e}\n")
+        return False
+
+
+def step_6_enrich_products():
+    """
+    Step 6: Enrich products with financial and geographic data.
+    """
+    print("=" * 60)
+    print("STEP 6: PRODUCT ENRICHMENT")
+    print("=" * 60)
+
+    print("Starting product enrichment with financial APIs...")
+    print("This may take several minutes depending on the number of products")
+
+    try:
+        stats = run_enrichment_pipeline()
+
+        print("\nENRICHMENT RESULTS:")
+        print(f"   Total processed: {stats.get('total_processed', 0)}")
+        print(f"   Successfully enriched: {stats.get('enriched', 0)}")
+        print(f"   Geographic enriched: {stats.get('geographic_enriched', 0)}")
+        print(f"   Non-tradeable: {stats.get('non_tradeable', 0)}")
+        print(f"   Failed: {stats.get('failed', 0)}")
+
+        if stats.get('total_processed', 0) > 0:
+            success_rate = (
+                stats.get('enriched', 0) / stats['total_processed'] * 100
+            )
+            print(f"   Success rate: {success_rate:.1f}%")
+
+        print("\nSTEP 6 COMPLETED: Product enrichment finished\n")
+        return stats
+    except Exception as e:
+        print(f"\nERROR during enrichment: {e}\n")
+        return None
+
+
 def run_complete_pipeline(import_folder=None):
     """
     Run complete database construction pipeline.
@@ -168,9 +247,19 @@ def run_complete_pipeline(import_folder=None):
     if stats is None:
         return False
 
+    # Step 5: Asset parsing
+    if not step_5_parse_assets(import_folder):
+        print("WARNING: Cannot continue without parsed assets")
+        return False
+
+    # Step 6: Product enrichment
+    enrichment_stats = step_6_enrich_products()
+    if enrichment_stats is None:
+        print("WARNING: Product enrichment failed, but database is usable")
+
     print("COMPLETE PIPELINE FINISHED SUCCESSFULLY")
     print("=" * 80)
-    print("Database is now ready for use.")
+    print("Database is now ready for use with enriched data.")
     print(f"Database file: {CONFIG.db_path}")
 
     return True
@@ -199,6 +288,9 @@ Usage examples:
   python -m capitolwatch.datapipeline.database.main --import-reports \\
     --folder /path/to/reports
   python -m capitolwatch.datapipeline.database.main --match
+  python -m capitolwatch.datapipeline.database.main --parse-assets \\
+    --folder /path/to/reports
+  python -m capitolwatch.datapipeline.database.main --enrich
         """
     )
 
@@ -206,7 +298,8 @@ Usage examples:
     parser.add_argument(
         "--complete",
         action="store_true",
-        help="Run complete pipeline (init + scrape + import + match)"
+        help="Run complete pipeline (init + scrape + import + match + "
+             "parse + enrich)"
     )
 
     # Individual steps
@@ -235,6 +328,19 @@ Usage examples:
         help="Step 4: Launch politician-to-report matching"
     )
 
+    parser.add_argument(
+        "--parse-assets",
+        action="store_true",
+        dest="parse_assets",
+        help="Step 5: Parse assets from HTML reports"
+    )
+
+    parser.add_argument(
+        "--enrich",
+        action="store_true",
+        help="Step 6: Enrich products with financial data"
+    )
+
     # Options
     parser.add_argument(
         "--folder",
@@ -249,7 +355,7 @@ Usage examples:
 
     # Verify at least one action is specified
     actions = [args.complete, args.init, args.scrape,
-               args.import_reports, args.match]
+               args.import_reports, args.match, args.parse_assets, args.enrich]
     if not any(actions):
         parser.print_help()
         sys.exit(1)
@@ -274,6 +380,16 @@ Usage examples:
 
         if args.match:
             stats = step_4_match_politicians()
+            if stats is None:
+                sys.exit(1)
+
+        if args.parse_assets:
+            success = step_5_parse_assets(args.folder)
+            if not success:
+                sys.exit(1)
+
+        if args.enrich:
+            stats = step_6_enrich_products()
             if stats is None:
                 sys.exit(1)
 
