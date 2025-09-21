@@ -23,7 +23,7 @@ from capitolwatch.services.products import (
     enrich_product
 )
 from capitolwatch.datapipeline.database.geographic_enrichment import (
-    classify_product_geography
+    enrich_product_geography
 )
 
 
@@ -280,7 +280,16 @@ def enrich_single_product(
 
         # Attempt geographic enrichment even for non-tradeable products
         try:
-            geo_data = classify_product_geography(name)
+            # Create product dict for geographic enrichment
+            product_dict = {
+                'id': product_id,
+                'name': name,
+                'ticker': None,
+                'exchange': None,
+                'currency': None,
+                'country': None
+            }
+            geo_data = enrich_product_geography(product_dict)
             if geo_data:
                 enrichment.update(geo_data)
                 print("  Geographic enrichment applied")
@@ -362,7 +371,16 @@ def enrich_single_product(
 
     # --- Geographic enrichment ---
     try:
-        geo_data = classify_product_geography(name)
+        # Create comprehensive product dict for geographic enrichment
+        product_dict = {
+            'id': product_id,
+            'name': name,
+            'ticker': enrichment.get('ticker'),
+            'exchange': enrichment.get('exchange'),
+            'currency': enrichment.get('currency'),
+            'country': enrichment.get('country')
+        }
+        geo_data = enrich_product_geography(product_dict)
         if geo_data:
             enrichment.update(geo_data)
             print("  Geographic enrichment applied")
