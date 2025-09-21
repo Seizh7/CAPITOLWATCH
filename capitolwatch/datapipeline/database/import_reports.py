@@ -5,7 +5,7 @@
 import hashlib
 from datetime import datetime, timezone
 from config import CONFIG
-from capitolwatch.services.reports import upsert_report_import_metadata
+from capitolwatch.services.reports import add_report
 
 
 def import_reports(folder_path, db_path, project_root):
@@ -32,7 +32,7 @@ def import_reports(folder_path, db_path, project_root):
         relative_path = str(file.relative_to(project_root))
 
         # Upsert via service layer; this will insert or update as needed
-        status = upsert_report_import_metadata(
+        status = add_report(
             report_id,
             checksum=checksum,
             source_file=relative_path,
