@@ -186,24 +186,26 @@ def update_report_fields(
 # ---------- Write API (add*) ----------
 
 def add_report(
-    report_id: int,
+    report_id: Optional[int] = None,
     *,
     checksum: str,
-    source_file: str,
+    source_file: str = "",
     encoding: str = "utf-8",
     import_timestamp: Optional[str] = None,
     url: Optional[str] = None,
     config: Optional[object] = None,
     connection=None,
-) -> str:
+) -> tuple[int, str]:
     """
     Insert a new report row with import metadata or update an existing one.
+      - If report_id is None, auto-generate ID and insert new row.
       - If report exists (by id), update checksum, source_file, encoding,
         import_timestamp, and url (url only if provided).
       - If not, insert a new row with provided values (url can be None).
 
     Args:
         report_id: Primary key of the report (filename stem as int).
+                  If None, auto-generate ID.
         checksum: SHA-1 (or other) checksum of the HTML content.
         source_file: Relative path to the stored HTML file.
         encoding: File encoding label (default "utf-8").
@@ -213,8 +215,8 @@ def add_report(
         connection: Optional existing DB connection to reuse.
 
     Returns:
-        "updated" if an existing row was updated, "inserted" if a new row
-        was created.
+        Tuple of (report_id, status) where status is "updated", "inserted",
+        or "auto_inserted".
     """
     close = False
     if connection is None:
@@ -225,6 +227,20 @@ def add_report(
 
     try:
         cur = connection.cursor()
+
+        # If report_id is None, auto-generate ID
+        if report_id is None:
+            cur.execute(
+                (
+                    "INSERT INTO reports (url, import_timestamp, checksum, "
+                    "encoding, source_file) VALUES (?, ?, ?, ?, ?)"
+                ),
+                (url, import_timestamp, checksum, encoding, source_file),
+            )
+            generated_id = cur.lastrowid
+            if close:
+                connection.commit()
+            return (generated_id, "auto_inserted")
 
         # Try update first (don't overwrite URL with None)
         cur.execute(
@@ -248,7 +264,7 @@ def add_report(
         if cur.rowcount > 0:
             if close:
                 connection.commit()
-            return "updated"
+            return (report_id, "updated")
 
         # Not found -> insert
         cur.execute(
@@ -268,7 +284,45 @@ def add_report(
 
         if close:
             connection.commit()
-        return "inserted"
+        return (report_id, "inserted")
+    finally:
+        if close:
+            connection.close()
+
+
+def update_report_source_file(
+    report_id: int,
+    source_file: str,
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> bool:
+    """
+    Update the source_file field for an existing report.
+
+    Args:
+        report_id: Report primary key to update.
+        source_file: Relative path to the stored HTML file.
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        True if the row was updated, else False.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            "UPDATE reports SET source_file = ? WHERE id = ?",
+            (source_file, report_id),
+        )
+
+        if close:
+            connection.commit()
+        return cur.rowcount > 0
     finally:
         if close:
             connection.close()
