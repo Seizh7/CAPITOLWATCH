@@ -4,8 +4,11 @@
 
 import time
 import hashlib
-import sqlite3
 from datetime import datetime, timezone
+from capitolwatch.services.reports import (
+    add_report,
+    update_report_source_file
+)
 
 
 def download_report(driver, url, config):
@@ -35,20 +38,17 @@ def download_report(driver, url, config):
     # Compute SHA-1 checksum of the HTML content
     checksum = hashlib.sha1(html_content.encode("utf-8")).hexdigest()
 
-    # Insert metadata in DB (without source_file yet)
-    conn = sqlite3.connect(config.db_path)
-    cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO reports (url, import_timestamp, checksum, encoding)
-        VALUES (?, ?, ?, ?)
-    """, (
-        url,
-        datetime.now(timezone.utc).isoformat(),
-        checksum,
-        "utf-8"
-    ))
-    report_id = cur.lastrowid  # Get the auto-incremented ID
+    # Create report in database first to get auto-generated ID
+    report_id, status = add_report(
+        report_id=None,  # Auto-generate ID
+        checksum=checksum,
+        encoding="utf-8",
+        import_timestamp=datetime.now(timezone.utc).isoformat(),
+        url=url,
+        config=config
+    )
 
+    # Create filename using the generated ID
     filename = config.output_folder / f"{report_id}.html"
     relative_path = filename.relative_to(config.project_root)
 
@@ -57,14 +57,13 @@ def download_report(driver, url, config):
         f.write(html_content)
     print(f"HTML saved: {filename}")
 
-    # Update the DB row with the source_file
-    cur.execute("""
-        UPDATE reports
-        SET source_file = ?
-        WHERE id = ?
-    """, (str(relative_path), report_id))
+    # Update the report with the source file path
+    update_report_source_file(
+        report_id=report_id,
+        source_file=str(relative_path),
+        config=config
+    )
 
-    conn.commit()
-    conn.close()
+    print(f"Report {status} in database with ID: {report_id}")
 
     time.sleep(1)
