@@ -25,7 +25,7 @@ def get_current_senators(config):
         # Build the API request URL and parameters
         url = "https://api.congress.gov/v3/member"
         parameters = {
-            "api_key": config.api_key,
+            "api_key": config.congress_api_key,
             "format": "json",
             "currentMember": "true",
             "limit": limit,
