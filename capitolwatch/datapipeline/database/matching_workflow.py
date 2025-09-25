@@ -11,6 +11,7 @@ from capitolwatch.services.politician_matcher import (
     get_politician_id_by_name_enhanced
 )
 from capitolwatch.services.reports import update_report_fields
+from capitolwatch.services.politicians import get_politician_basic_info
 from capitolwatch.db import get_connection
 from capitolwatch.datapipeline.parsing.extractor import (
     extract_politician_name,
@@ -171,27 +172,15 @@ def main() -> dict:
                                 f"{report_id} for {filename}: {e}"
                             )
 
-                    # Optionally print the canonical DB name next to the ID
-                    try:
-                        cur.execute(
-                            (
-                                "SELECT first_name, last_name "
-                                "FROM politicians WHERE id = ?"
-                            ),
-                            (politician_id,),
-                        )
-                        row = cur.fetchone()
-                        if row:
-                            if isinstance(row, dict) or hasattr(row, "keys"):
-                                db_first = row["first_name"]
-                                db_last = row["last_name"]
-                            else:
-                                db_first, db_last = row
-                            db_name = f"{db_first} {db_last}"
-                        else:
-                            db_name = "?"
-                    except Exception:
-                        db_name = "?"
+                    # Get canonical DB name using the service
+                    politician_info = get_politician_basic_info(
+                        politician_id, connection=conn
+                    )
+                    db_name = (
+                        politician_info["politician_name"]
+                        if politician_info
+                        else "?"
+                    )
 
                     print(
                         f"{filename}: {first_names} {last_name} → "
