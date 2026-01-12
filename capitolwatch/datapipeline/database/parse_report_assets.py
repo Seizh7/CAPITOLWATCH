@@ -21,7 +21,7 @@ from config import CONFIG
 from capitolwatch.db import get_connection
 from capitolwatch.services.assets import add_asset
 from capitolwatch.services.products import add_product
-from capitolwatch.datapipeline.parsing.extractor import extract_assets
+from capitolwatch.datapipeline.database.extractor import extract_assets
 from capitolwatch.services.reports import get_politician_id
 from capitolwatch.datapipeline.database.matching_workflow import (
     parse_report_id

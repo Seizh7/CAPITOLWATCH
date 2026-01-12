@@ -2,7 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
-import capitolwatch.datapipeline.parsing.extractor as extractor
+import capitolwatch.datapipeline.database.extractor as extractor
 from bs4 import BeautifulSoup
 import pathlib
 
