@@ -14,7 +14,7 @@ from capitolwatch.services.politician_matcher import match_politician
 from capitolwatch.services.reports import update_report_fields
 from capitolwatch.services.politicians import get_politician_basic_info
 from capitolwatch.db import get_connection
-from capitolwatch.datapipeline.parsing.extractor import (
+from capitolwatch.datapipeline.database.extractor import (
     extract_politician_name,
     extract_report_year,
 )
@@ -281,7 +281,7 @@ def main() -> dict:
         }
     """
     reports_dir = CONFIG.output_folder
-    
+
     # Load manual overrides for statistics
     manual_overrides = load_manual_overrides()
     print(f"Loaded {len(manual_overrides)} manual overrides")
