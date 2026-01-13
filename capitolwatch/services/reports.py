@@ -186,7 +186,6 @@ def update_report_fields(
 # ---------- Write API (add*) ----------
 
 def add_report(
-    report_id: Optional[int] = None,
     *,
     checksum: str,
     source_file: str = "",
@@ -195,28 +194,21 @@ def add_report(
     url: Optional[str] = None,
     config: Optional[object] = None,
     connection=None,
-) -> tuple[int, str]:
+) -> int:
     """
-    Insert a new report row with import metadata or update an existing one.
-      - If report_id is None, auto-generate ID and insert new row.
-      - If report exists (by id), update checksum, source_file, encoding,
-        import_timestamp, and url (url only if provided).
-      - If not, insert a new row with provided values (url can be None).
+    Insert a new report row with auto-generated ID.
 
     Args:
-        report_id: Primary key of the report (filename stem as int).
-                  If None, auto-generate ID.
-        checksum: SHA-1 (or other) checksum of the HTML content.
+        checksum: SHA-1 checksum of the HTML content.
         source_file: Relative path to the stored HTML file.
         encoding: File encoding label (default "utf-8").
         import_timestamp: ISO timestamp (defaults to now in UTC if None).
-        url: Original URL if known (kept as-is when updating if None).
+        url: Original URL if known (optional).
         config: Optional config override.
         connection: Optional existing DB connection to reuse.
 
     Returns:
-        Tuple of (report_id, status) where status is "updated", "inserted",
-        or "auto_inserted".
+        The auto-generated report ID.
     """
     close = False
     if connection is None:
@@ -227,64 +219,17 @@ def add_report(
 
     try:
         cur = connection.cursor()
-
-        # If report_id is None, auto-generate ID
-        if report_id is None:
-            cur.execute(
-                (
-                    "INSERT INTO reports (url, import_timestamp, checksum, "
-                    "encoding, source_file) VALUES (?, ?, ?, ?, ?)"
-                ),
-                (url, import_timestamp, checksum, encoding, source_file),
-            )
-            generated_id = cur.lastrowid
-            if close:
-                connection.commit()
-            return (generated_id, "auto_inserted")
-
-        # Try update first (don't overwrite URL with None)
         cur.execute(
             (
-                "UPDATE reports SET "
-                "checksum = ?, source_file = ?, encoding = ?, "
-                "import_timestamp = ?, "
-                "url = COALESCE(?, url) "
-                "WHERE id = ?"
+                "INSERT INTO reports (url, import_timestamp, checksum, "
+                "encoding, source_file) VALUES (?, ?, ?, ?, ?)"
             ),
-            (
-                checksum,
-                source_file,
-                encoding,
-                import_timestamp,
-                url,
-                report_id,
-            ),
+            (url, import_timestamp, checksum, encoding, source_file),
         )
-
-        if cur.rowcount > 0:
-            if close:
-                connection.commit()
-            return (report_id, "updated")
-
-        # Not found -> insert
-        cur.execute(
-            (
-                "INSERT INTO reports (id, url, import_timestamp, checksum, "
-                "encoding, source_file) VALUES (?, ?, ?, ?, ?, ?)"
-            ),
-            (
-                report_id,
-                url,
-                import_timestamp,
-                checksum,
-                encoding,
-                source_file,
-            ),
-        )
-
+        generated_id = cur.lastrowid
         if close:
             connection.commit()
-        return (report_id, "inserted")
+        return generated_id
     finally:
         if close:
             connection.close()
