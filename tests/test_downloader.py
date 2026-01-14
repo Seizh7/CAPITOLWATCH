@@ -4,7 +4,6 @@
 
 from unittest.mock import MagicMock, patch
 from capitolwatch.datapipeline.scraping.downloader import download_report
-import sqlite3
 
 
 def test_download_report(tmp_path):
@@ -16,42 +15,22 @@ def test_download_report(tmp_path):
 
     # Préparation du mock config
     mock_config = MagicMock()
-    mock_config.db_path = tmp_path / "test.db"
     mock_config.output_folder = tmp_path / "output"
     mock_config.output_folder.mkdir()  # Créer le dossier de sortie
     mock_config.project_root = tmp_path
 
-    # Création de la base de données
-    conn = sqlite3.connect(mock_config.db_path)
-    conn.execute("""
-        CREATE TABLE reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT,
-            import_timestamp TEXT,
-            checksum TEXT,
-            encoding TEXT,
-            source_file TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    # Appel de la fonction — patcher le sleep pour accélérer
+    with patch("builtins.print"), patch(
+        "capitolwatch.datapipeline.scraping.downloader.time.sleep",
+        return_value=None
+    ):
+        filename, returned_url = download_report(mock_driver, url, mock_config)
 
-    with patch("builtins.print"):
-        download_report(mock_driver, url, mock_config)
-
-    # On rouvre la DB pour récupérer le chemin du fichier
-    conn = sqlite3.connect(mock_config.db_path)
-    cur = conn.cursor()
-    cur.execute("SELECT source_file FROM reports")
-    row = cur.fetchone()
-    conn.close()
-
-    source_file = row[0]
-    expected_file = tmp_path / source_file
-
-    assert expected_file.exists()
-    content = expected_file.read_text(encoding="utf-8")
+    # Vérifications sur le fichier créé et le contenu
+    assert filename.exists()
+    content = filename.read_text(encoding="utf-8")
     assert "Fake Report" in content
+    assert returned_url == "https://efdsearch.senate.gov" + url
 
 
 def test_download_absolute_url(tmp_path):
@@ -64,37 +43,17 @@ def test_download_absolute_url(tmp_path):
     )
 
     mock_config = MagicMock()
-    mock_config.db_path = tmp_path / "test.db"
     mock_config.output_folder = tmp_path / "output"
     mock_config.output_folder.mkdir()
     mock_config.project_root = tmp_path
 
-    conn = sqlite3.connect(mock_config.db_path)
-    conn.execute("""
-        CREATE TABLE reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT,
-            import_timestamp TEXT,
-            checksum TEXT,
-            encoding TEXT,
-            source_file TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with patch("builtins.print"), patch(
+        "capitolwatch.datapipeline.scraping.downloader.time.sleep",
+        return_value=None
+    ):
+        filename, returned_url = download_report(mock_driver, url, mock_config)
 
-    with patch("builtins.print"):
-        download_report(mock_driver, url, mock_config)
-
-    conn = sqlite3.connect(mock_config.db_path)
-    cur = conn.cursor()
-    cur.execute("SELECT source_file FROM reports")
-    row = cur.fetchone()
-    conn.close()
-
-    source_file = row[0]
-    expected_file = tmp_path / source_file
-
-    assert expected_file.exists()
-    content = expected_file.read_text(encoding="utf-8")
+    assert filename.exists()
+    content = filename.read_text(encoding="utf-8")
     assert "Absolute" in content
+    assert returned_url == url
