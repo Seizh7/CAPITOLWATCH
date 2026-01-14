@@ -20,14 +20,11 @@ from capitolwatch.datapipeline.scraping.core import run_scraping
 from config import CONFIG
 
 
-app = typer.Typer(
-    help="Scrape US Senate annual reports from efdsearch.senate.gov",
-    no_args_is_help=True
-)
+app = typer.Typer()
 
 
-@app.command()
-def scrape(
+@app.callback(invoke_without_command=True)
+def main(
     year: str = typer.Option(
         ...,
         "--year",
@@ -54,7 +51,7 @@ def scrape(
     )
 ):
     """
-    Scrape US Senate annual reports.
+    Scrape US Senate annual reports from efdsearch.senate.gov.
 
     Examples:
         python -m capitolwatch.datapipeline.scraping --year 2023
@@ -86,10 +83,5 @@ def scrape(
         raise typer.Exit(1)
 
 
-def main():
-    """Entry point for CLI when called directly."""
-    app()
-
-
 if __name__ == "__main__":
-    main()
+    app()
