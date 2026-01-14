@@ -158,7 +158,7 @@ def initialize_database(config):
         ("idx_embeddings_method", "product_embeddings", "method"),
         ("idx_embeddings_updated", "product_embeddings", "updated_at"),
         ("idx_portfolio_embeddings_method", "portfolio_embeddings", "method"),
-        ("idx_portfolio_embeddings_created", "portfolio_embeddings", 
+        ("idx_portfolio_embeddings_created", "portfolio_embeddings",
          "created_at")
     ]
 
