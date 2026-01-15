@@ -5,7 +5,11 @@
 import hashlib
 from datetime import datetime, timezone
 from config import CONFIG
-from capitolwatch.services.reports import add_report, update_report_source_file
+from capitolwatch.services.reports import (
+    add_report,
+    update_report_source_file,
+    get_report_by_checksum,
+)
 
 
 def import_reports(folder_path, project_root):
@@ -34,12 +38,25 @@ def import_reports(folder_path, project_root):
 
     print(f"Found {len(files)} HTML file(s) to import.")
 
+    imported_count = 0
+    skipped_count = 0
+
     for file in files:
         with open(file, "r", encoding="utf-8") as f:
             html_content = f.read()
 
         # Compute SHA-1 checksum of the HTML content
         checksum = hashlib.sha1(html_content.encode("utf-8")).hexdigest()
+
+        # Check if report already exists
+        existing = get_report_by_checksum(checksum)
+        if existing:
+            print(
+                f"Report {existing['id']} already exists "
+                f"(skipping {file.name})."
+            )
+            skipped_count += 1
+            continue
 
         # Insert new report with auto-generated ID
         report_id = add_report(
@@ -59,8 +76,11 @@ def import_reports(folder_path, project_root):
         update_report_source_file(report_id, relative_path)
 
         print(f"Report {report_id} imported (renamed from {file.name}).")
+        imported_count += 1
 
-    print("Import finished.")
+    print(
+        f"Import finished: {imported_count} imported, {skipped_count} skipped."
+    )
 
 
 if __name__ == "__main__":
