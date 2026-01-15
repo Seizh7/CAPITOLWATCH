@@ -5,41 +5,58 @@
 import hashlib
 from datetime import datetime, timezone
 from config import CONFIG
-from capitolwatch.services.reports import add_report, update_report_source_file
+from capitolwatch.services.reports import (
+    add_report,
+    update_report_source_file,
+    get_report_by_checksum,
+)
 
 
 def import_reports(folder_path, project_root):
     """
-    Imports temporary HTML report files downloaded by downloader.py and saves
+    Imports HTML report files downloaded by downloader.py and saves
     their metadata in the database.
 
     Process:
-    1. Reads temp_*.html files
+    1. Reads *.html files
     2. Computes checksum
     3. Inserts in database (auto-generates ID)
     4. Renames file with the generated ID
 
     Args:
-        folder_path (str or Path): Directory containing temp_*.html files
+        folder_path (str or Path): Directory containing *.html files
         db_path (str): Path to the SQLite database
         project_root (str or Path): Project root for relative paths
     """
 
-    # Iterate through temporary files only
-    temp_files = list(folder_path.glob("temp_*.html"))
+    # Iterate through HTML files only
+    files = list(folder_path.glob("*.html"))
 
-    if not temp_files:
-        print("No temporary files found to import.")
+    if not files:
+        print("No HTML files found to import.")
         return
 
-    print(f"Found {len(temp_files)} temporary file(s) to import.")
+    print(f"Found {len(files)} HTML file(s) to import.")
 
-    for file in temp_files:
+    imported_count = 0
+    skipped_count = 0
+
+    for file in files:
         with open(file, "r", encoding="utf-8") as f:
             html_content = f.read()
 
         # Compute SHA-1 checksum of the HTML content
         checksum = hashlib.sha1(html_content.encode("utf-8")).hexdigest()
+
+        # Check if report already exists
+        existing = get_report_by_checksum(checksum)
+        if existing:
+            print(
+                f"Report {existing['id']} already exists "
+                f"(skipping {file.name})."
+            )
+            skipped_count += 1
+            continue
 
         # Insert new report with auto-generated ID
         report_id = add_report(
@@ -59,8 +76,11 @@ def import_reports(folder_path, project_root):
         update_report_source_file(report_id, relative_path)
 
         print(f"Report {report_id} imported (renamed from {file.name}).")
+        imported_count += 1
 
-    print("Import finished.")
+    print(
+        f"Import finished: {imported_count} imported, {skipped_count} skipped."
+    )
 
 
 if __name__ == "__main__":

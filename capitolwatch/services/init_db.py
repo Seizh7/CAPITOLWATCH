@@ -85,8 +85,10 @@ def initialize_database(config):
         risk_rating TEXT,                   -- Risk level
 
         -- Geographic classification
-        international_exposure TEXT,        -- Geographic exposure (e.g., "US", "International", "Global")
-        geographic_classification TEXT,     -- Region classification (e.g., "North America", "Europe")
+        international_exposure TEXT,
+        -- (e.g., "US", "International", "Global")
+        geographic_classification TEXT,
+        -- (e.g., "North America", "Europe")
 
         -- Enrichment metadata
         last_updated TEXT,                  -- Last update timestamp
