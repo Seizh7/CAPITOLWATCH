@@ -84,6 +84,10 @@ def initialize_database(config):
         market_cap_tier TEXT,               -- Size (Large/Mid/Small/Micro)
         risk_rating TEXT,                   -- Risk level
 
+        -- Geographic classification
+        international_exposure TEXT,        -- Geographic exposure (e.g., "US", "International", "Global")
+        geographic_classification TEXT,     -- Region classification (e.g., "North America", "Europe")
+
         -- Enrichment metadata
         last_updated TEXT,                  -- Last update timestamp
         data_source TEXT,                   -- Data source (e.g., API, Manual)
