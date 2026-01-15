@@ -10,31 +10,31 @@ from capitolwatch.services.reports import add_report, update_report_source_file
 
 def import_reports(folder_path, project_root):
     """
-    Imports temporary HTML report files downloaded by downloader.py and saves
+    Imports HTML report files downloaded by downloader.py and saves
     their metadata in the database.
 
     Process:
-    1. Reads temp_*.html files
+    1. Reads *.html files
     2. Computes checksum
     3. Inserts in database (auto-generates ID)
     4. Renames file with the generated ID
 
     Args:
-        folder_path (str or Path): Directory containing temp_*.html files
+        folder_path (str or Path): Directory containing *.html files
         db_path (str): Path to the SQLite database
         project_root (str or Path): Project root for relative paths
     """
 
-    # Iterate through temporary files only
-    temp_files = list(folder_path.glob("temp_*.html"))
+    # Iterate through HTML files only
+    files = list(folder_path.glob("*.html"))
 
-    if not temp_files:
-        print("No temporary files found to import.")
+    if not files:
+        print("No HTML files found to import.")
         return
 
-    print(f"Found {len(temp_files)} temporary file(s) to import.")
+    print(f"Found {len(files)} HTML file(s) to import.")
 
-    for file in temp_files:
+    for file in files:
         with open(file, "r", encoding="utf-8") as f:
             html_content = f.read()
 
