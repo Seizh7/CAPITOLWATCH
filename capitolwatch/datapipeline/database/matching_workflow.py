@@ -295,6 +295,7 @@ def main() -> dict:
         "processed": 0,
         "matched": 0,
         "updated": 0,
+        "skipped": 0,
         "needs_review": [],
         "manual_overrides_used": 0,
         "namematching_rejected": 0,
@@ -309,6 +310,23 @@ def main() -> dict:
             # Skip non-HTML
             if not filename.endswith(".html"):
                 continue
+
+            # Check if report already has a politician_id assigned
+            report_id = parse_report_id(filename)
+            if report_id is not None:
+                cur.execute(
+                    "SELECT politician_id FROM reports WHERE id = ?",
+                    (report_id,)
+                )
+                row = cur.fetchone()
+                if row and row["politician_id"]:
+                    print(
+                        f"{filename}: Already matched to "
+                        f"{row['politician_id']} (skipping)."
+                    )
+                    stats["skipped"] += 1
+                    stats["processed"] += 1
+                    continue
 
             file_path = os.path.join(reports_dir, filename)
 
