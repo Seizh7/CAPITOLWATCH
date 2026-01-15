@@ -129,6 +129,43 @@ def get_politician_id(
             connection.close()
 
 
+def get_report_by_checksum(
+    checksum: str,
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> Optional[dict]:
+    """
+    Return a report by its checksum, or None if not found.
+
+    Args:
+        checksum: SHA-1 checksum of the HTML content.
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        dict with report data or None if not found.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            (
+                "SELECT id, checksum, source_file, encoding, "
+                "import_timestamp, url, politician_id, year "
+                "FROM reports WHERE checksum = ? LIMIT 1"
+            ),
+            (checksum,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+    finally:
+        if close:
+            connection.close()
+
+
 # ---------- Update API (update*) ----------
 
 def update_report_fields(
@@ -196,7 +233,8 @@ def add_report(
     connection=None,
 ) -> int:
     """
-    Insert a new report row with auto-generated ID.
+    Insert a new report row with auto-generated ID, or return existing ID if
+    checksum already exists.
 
     Args:
         checksum: SHA-1 checksum of the HTML content.
@@ -214,10 +252,18 @@ def add_report(
     if connection is None:
         connection, close = get_connection(config or CONFIG), True
 
-    if import_timestamp is None:
-        import_timestamp = datetime.now(timezone.utc).isoformat()
-
     try:
+        # Check if report with this checksum already exists
+        existing = get_report_by_checksum(
+            checksum, config=config, connection=connection
+        )
+        if existing:
+            return existing["id"]
+
+        # Insert new report
+        if import_timestamp is None:
+            import_timestamp = datetime.now(timezone.utc).isoformat()
+
         cur = connection.cursor()
         cur.execute(
             (
