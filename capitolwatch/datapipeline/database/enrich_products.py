@@ -27,6 +27,119 @@ from capitolwatch.datapipeline.database.geographic_enrichment import (
 )
 
 
+# ---------- Product Type Filtering ----------
+# Product types relevant for financial investment analysis
+# These products contain enrichable data (ticker, sector, etc.)
+ANALYZABLE_PRODUCT_TYPES = {
+    # Actions cotées en bourse
+    'Corporate SecuritiesStock',
+    'Corporate SecuritiesStock Option',
+    'American Depository Receipt',
+
+    # Fonds d'investissement
+    'Mutual FundsMutual Fund',
+    'Mutual FundsExchange Traded Fund/Note',
+    'Mutual FundsStable Value Fund',
+
+    # Obligations (partiellement enrichissables)
+    'Corporate SecuritiesCorporate Bond',
+    'Government SecuritiesUS Treasury/Agency Security',
+    'Government SecuritiesMunicipal Security',
+    'Foreign BondsForeign Bond',
+}
+
+# Product types excluded from analysis (not relevant for clustering)
+# - Non-financial assets (real estate, farms)
+# - Containers without detailed contents (IRA, 401k, managed accounts)
+# - Insurance products and annuities
+# - Private, non-listed holdings
+EXCLUDED_PRODUCT_TYPES = {
+    # Dépôts et comptes bancaires
+    'Bank Deposit',
+    'Brokerage/Managed Account',
+
+    # Assurance et rentes
+    'Life InsuranceWhole',
+    'Life InsuranceUniversal',
+    'Life InsuranceVariable',
+    'AnnuityFixed',
+    'AnnuityVariable Annuity',
+
+    # Immobilier et actifs physiques
+    'Real EstateResidential',
+    'Real EstateCommercial',
+    'Real EstateUnimproved Land',
+    'Real EstateMineral Rights',
+    'Real EstateREIT',
+    'Farm',
+    'Personal PropertyOther Property',
+
+    # Entités commerciales privées
+    'Business EntityLimited Liability Company (LLC)',
+    'Business EntityLimited Partnership (LP)',
+    'Business EntityLimited Liability Limited Partnership (LLLP)',
+    'Business EntityGeneral Partnership',
+    'Business EntitySole Proprietorship',
+    'Corporate SecuritiesNon-Public Stock',
+
+    # Plans de retraite (containers)
+    'Retirement PlansIRA',
+    'Retirement Plans401(k), 403(b), or other Defined Contribution Plan.',
+    'Retirement PlansDefined Benefit Pension Plan',
+    'Retirement PlansDeferred Compensation',
+
+    # Compensation différée
+    'Deferred Compensation',
+    'Deferred CompensationDeferred Compensation - Other',
+    'Deferred CompensationDeferred Compensation - Cash',
+
+    # Trusts et fiducies
+    'TrustGeneral Trust',
+    'TrustBlind',
+    'TrustExcepted',
+
+    # Épargne éducation
+    'Education Savings Plans529 College Savings Plan',
+    'UGMA/UTMA',
+
+    # Fonds privés (non enrichissables via API)
+    'Investment FundPrivate Equity Fund',
+    'Investment FundHedge Fund',
+    'Investment FundInvestment Club',
+
+    # Autres
+    'Accounts ReceivableFrom a Business',
+    'Accounts ReceivableFrom an Individual',
+    'Intellectual PropertyCopyrights',
+    'Cryptocurrency',
+    'Other',
+}
+
+
+def is_product_analyzable(product_type: str) -> bool:
+    """
+    Determine whether a product type is relevant for analysis.
+
+    Args:
+        product_type: The financial product type.
+
+    Returns:
+        True if the product should be enriched and analyzed.
+    """
+    if not product_type:
+        return False
+
+    # Vérification explicite dans les listes
+    if product_type in ANALYZABLE_PRODUCT_TYPES:
+        return True
+    if product_type in EXCLUDED_PRODUCT_TYPES:
+        return False
+
+    # Par défaut, on inclut les types inconnus pour éviter de manquer
+    # des données potentiellement intéressantes
+    return True
+
+
 def extract_ticker(name: str) -> Optional[str]:
     """
     Extracts a ticker from a product name.
@@ -251,7 +364,7 @@ def determine_fund_flags(name: str, asset_class: str) -> Dict[str, bool]:
 def enrich_single_product(
     product: Dict,
     openfigi_session: requests.Session
-) -> Dict:
+) -> Optional[Dict]:
     """
     Enrich a single product with financial and geographic data.
 
@@ -260,10 +373,15 @@ def enrich_single_product(
         openfigi_session (requests.Session): OpenFIGI HTTP session.
 
     Returns:
-        Dict: Enrichment data.
+        Dict: Enrichment data, or None if product type is excluded.
     """
     product_id = product['id']
     name = product['name']
+    product_type = product.get('type', '')
+
+    # Skip non-analyzable product types
+    if not is_product_analyzable(product_type):
+        return None
 
     print(f"[{product_id}] Processing product: {name}")
 
@@ -440,6 +558,7 @@ def run_enrichment_pipeline(
         'failed': 0,
         'non_tradeable': 0,
         'geographic_enriched': 0,
+        'skipped_non_analyzable': 0,
         'start_time': datetime.now()
     }
 
@@ -453,6 +572,12 @@ def run_enrichment_pipeline(
                 product,
                 openfigi_session
             )
+
+            # Skip if product type is not analyzable
+            if enrichment_data is None:
+                stats['skipped_non_analyzable'] += 1
+                stats['total_processed'] += 1
+                continue
 
             # Update in database
             conn = get_connection(CONFIG)
@@ -493,14 +618,17 @@ def run_enrichment_pipeline(
     print("\nComprehensive Product Enrichment Report")
     print(f"Duration: {duration}")
     print(f"Total processed: {stats['total_processed']}")
+    print(f"Skipped (non-analyzable types): {stats['skipped_non_analyzable']}")
     print(f"Successfully enriched: {stats['enriched']}")
     print(f"Geographic enriched: {stats['geographic_enriched']}")
     print(f"Non-tradeable: {stats['non_tradeable']}")
     print(f"Failures: {stats['failed']}")
 
-    if stats['total_processed'] > 0:
-        success_rate = (stats['enriched'] / stats['total_processed']) * 100
-        print(f"Success rate: {success_rate:.1f}%")
+    skipped = stats['skipped_non_analyzable']
+    analyzable_total = stats['total_processed'] - skipped
+    if analyzable_total > 0:
+        success_rate = (stats['enriched'] / analyzable_total) * 100
+        print(f"Success rate (analyzable only): {success_rate:.1f}%")
 
     return stats
 
