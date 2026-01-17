@@ -219,6 +219,87 @@ def quick_update(
 
 
 @app.command()
+def enrich_products():
+    """
+    Enrich products with financial and geographic data.
+
+    Fetches financial metadata from OpenFIGI and Yahoo Finance,
+    adds geographic information, and updates the database.
+    Only processes analyzable product types (stocks, ETFs, bonds, etc.).
+
+    Example:
+        python -m capitolwatch.datapipeline enrich-products
+    """
+    typer.secho(
+        "\nProduct Enrichment Pipeline",
+        fg=typer.colors.CYAN,
+        bold=True
+    )
+
+    from capitolwatch.datapipeline.database.enrich_products import (
+        run_enrichment_pipeline
+    )
+
+    try:
+        stats = run_enrichment_pipeline()
+
+        # Display summary
+        typer.secho(
+            "\nEnrichment Completed",
+            fg=typer.colors.GREEN,
+            bold=True
+        )
+        typer.secho(
+            f"  Total processed: {stats['total_processed']}",
+            fg=typer.colors.WHITE
+        )
+        typer.secho(
+            f"  Skipped (non-analyzable): {stats['skipped_non_analyzable']}",
+            fg=typer.colors.YELLOW
+        )
+        typer.secho(
+            f"  Successfully enriched: {stats['enriched']}",
+            fg=typer.colors.GREEN
+        )
+        typer.secho(
+            f"  Geographic enriched: {stats['geographic_enriched']}",
+            fg=typer.colors.CYAN
+        )
+        typer.secho(
+            f"  Non-tradeable: {stats['non_tradeable']}",
+            fg=typer.colors.BLUE
+        )
+        typer.secho(
+            f"  Failures: {stats['failed']}",
+            fg=typer.colors.RED
+        )
+
+        # Calculate success rate
+        skipped = stats['skipped_non_analyzable']
+        analyzable_total = stats['total_processed'] - skipped
+        if analyzable_total > 0:
+            success_rate = (stats['enriched'] / analyzable_total) * 100
+            typer.secho(
+                f"  Success rate: {success_rate:.1f}%",
+                fg=typer.colors.GREEN
+            )
+
+    except KeyboardInterrupt:
+        typer.secho(
+            "\nEnrichment interrupted by user",
+            fg=typer.colors.YELLOW
+        )
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.secho(
+            f"\nEnrichment failed: {e}",
+            fg=typer.colors.RED,
+            err=True
+        )
+        raise typer.Exit(code=1)
+
+
+@app.command()
 def status():
     """
     Display pipeline status and statistics.
