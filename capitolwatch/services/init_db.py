@@ -75,10 +75,10 @@ def initialize_database(config):
         market_cap BIGINT,                  -- Market capitalization
 
         -- Trading metadata
-        currency TEXT DEFAULT 'USD',        -- Main currency
-        is_etf BOOLEAN DEFAULT 0,           -- ETF flag
-        is_mutual_fund BOOLEAN DEFAULT 0,   -- Mutual fund flag
-        is_index_fund BOOLEAN DEFAULT 0,    -- Index fund flag
+        currency TEXT,                      -- Main currency
+        is_etf BOOLEAN,                     -- ETF flag
+        is_mutual_fund BOOLEAN,             -- Mutual fund flag
+        is_index_fund BOOLEAN,              -- Index fund flag
 
         -- Computed classification
         market_cap_tier TEXT,               -- Size (Large/Mid/Small/Micro)
