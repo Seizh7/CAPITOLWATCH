@@ -11,6 +11,9 @@ from capitolwatch.services.reports import (
     get_report_by_checksum,
 )
 
+# Minimum file size in KB for valid reports (error pages are smaller)
+MIN_FILE_SIZE_KB = 15
+
 
 def import_reports(folder_path, project_root):
     """
@@ -40,8 +43,19 @@ def import_reports(folder_path, project_root):
 
     imported_count = 0
     skipped_count = 0
+    error_count = 0
 
     for file in files:
+        # Check file size (skip small files that are likely error pages)
+        file_size_kb = file.stat().st_size / 1024
+        if file_size_kb < MIN_FILE_SIZE_KB:
+            print(
+                f"Skipping {file.name}: too small ({file_size_kb:.1f} KB, "
+                f"minimum {MIN_FILE_SIZE_KB} KB)."
+            )
+            error_count += 1
+            continue
+
         with open(file, "r", encoding="utf-8") as f:
             html_content = f.read()
 
@@ -79,7 +93,9 @@ def import_reports(folder_path, project_root):
         imported_count += 1
 
     print(
-        f"Import finished: {imported_count} imported, {skipped_count} skipped."
+        f"Import finished: {imported_count} imported, "
+        f"{skipped_count} duplicates skipped, "
+        f"{error_count} error pages skipped."
     )
 
 
