@@ -31,17 +31,17 @@ from capitolwatch.datapipeline.database.geographic_enrichment import (
 # Product types relevant for financial investment analysis
 # These products contain enrichable data (ticker, sector, etc.)
 ANALYZABLE_PRODUCT_TYPES = {
-    # Actions cotées en bourse
+    # Listed equities
     'Corporate SecuritiesStock',
     'Corporate SecuritiesStock Option',
     'American Depository Receipt',
 
-    # Fonds d'investissement
+    # Investment funds
     'Mutual FundsMutual Fund',
     'Mutual FundsExchange Traded Fund/Note',
     'Mutual FundsStable Value Fund',
 
-    # Obligations (partiellement enrichissables)
+    # Bonds (partially enrichable)
     'Corporate SecuritiesCorporate Bond',
     'Government SecuritiesUS Treasury/Agency Security',
     'Government SecuritiesMunicipal Security',
@@ -54,18 +54,18 @@ ANALYZABLE_PRODUCT_TYPES = {
 # - Insurance products and annuities
 # - Private, non-listed holdings
 EXCLUDED_PRODUCT_TYPES = {
-    # Dépôts et comptes bancaires
+    # Bank deposits and accounts
     'Bank Deposit',
     'Brokerage/Managed Account',
 
-    # Assurance et rentes
+    # Insurance and annuities
     'Life InsuranceWhole',
     'Life InsuranceUniversal',
     'Life InsuranceVariable',
     'AnnuityFixed',
     'AnnuityVariable Annuity',
 
-    # Immobilier et actifs physiques
+    # Real estate and physical assets
     'Real EstateResidential',
     'Real EstateCommercial',
     'Real EstateUnimproved Land',
@@ -74,7 +74,7 @@ EXCLUDED_PRODUCT_TYPES = {
     'Farm',
     'Personal PropertyOther Property',
 
-    # Entités commerciales privées
+    # Private business entities
     'Business EntityLimited Liability Company (LLC)',
     'Business EntityLimited Partnership (LP)',
     'Business EntityLimited Liability Limited Partnership (LLLP)',
@@ -82,32 +82,32 @@ EXCLUDED_PRODUCT_TYPES = {
     'Business EntitySole Proprietorship',
     'Corporate SecuritiesNon-Public Stock',
 
-    # Plans de retraite (containers)
+    # Retirement plans (containers)
     'Retirement PlansIRA',
     'Retirement Plans401(k), 403(b), or other Defined Contribution Plan.',
     'Retirement PlansDefined Benefit Pension Plan',
     'Retirement PlansDeferred Compensation',
 
-    # Compensation différée
+    # Deferred compensation
     'Deferred Compensation',
     'Deferred CompensationDeferred Compensation - Other',
     'Deferred CompensationDeferred Compensation - Cash',
 
-    # Trusts et fiducies
+    # Trusts and fiduciaries
     'TrustGeneral Trust',
     'TrustBlind',
     'TrustExcepted',
 
-    # Épargne éducation
+    # Education savings
     'Education Savings Plans529 College Savings Plan',
     'UGMA/UTMA',
 
-    # Fonds privés (non enrichissables via API)
+    # Private funds (not enrichable via API)
     'Investment FundPrivate Equity Fund',
     'Investment FundHedge Fund',
     'Investment FundInvestment Club',
 
-    # Autres
+    # Other
     'Accounts ReceivableFrom a Business',
     'Accounts ReceivableFrom an Individual',
     'Intellectual PropertyCopyrights',
@@ -129,14 +129,14 @@ def is_product_analyzable(product_type: str) -> bool:
     if not product_type:
         return False
 
-    # Vérification explicite dans les listes
+    # Explicit check in lists
     if product_type in ANALYZABLE_PRODUCT_TYPES:
         return True
     if product_type in EXCLUDED_PRODUCT_TYPES:
         return False
 
-    # Par défaut, on inclut les types inconnus pour éviter de manquer
-    # des données potentiellement intéressantes
+    # By default include unknown types to avoid missing potentially
+    # interesting data
     return True
 
 
