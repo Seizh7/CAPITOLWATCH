@@ -41,8 +41,9 @@ def import_reports(folder_path, project_root):
 
     print(f"Found {len(files)} HTML file(s) to import.")
 
-    imported_count = 0
-    skipped_count = 0
+    # PHASE 1: Read all files and compute checksums BEFORE any renaming
+    # This prevents collisions when files are named 1.html, 2.html, etc.
+    files_to_process = []
     error_count = 0
 
     for file in files:
@@ -51,8 +52,9 @@ def import_reports(folder_path, project_root):
         if file_size_kb < MIN_FILE_SIZE_KB:
             print(
                 f"Skipping {file.name}: too small ({file_size_kb:.1f} KB, "
-                f"minimum {MIN_FILE_SIZE_KB} KB)."
+                f"minimum {MIN_FILE_SIZE_KB} KB). Deleting file."
             )
+            file.unlink()  # Delete the error page
             error_count += 1
             continue
 
@@ -61,6 +63,20 @@ def import_reports(folder_path, project_root):
 
         # Compute SHA-1 checksum of the HTML content
         checksum = hashlib.sha1(html_content.encode("utf-8")).hexdigest()
+
+        files_to_process.append({
+            'file': file,
+            'checksum': checksum,
+            'html_content': html_content
+        })
+
+    # PHASE 2: Process and import files
+    imported_count = 0
+    skipped_count = 0
+
+    for file_data in files_to_process:
+        file = file_data['file']
+        checksum = file_data['checksum']
 
         # Check if report already exists
         existing = get_report_by_checksum(checksum)
@@ -97,6 +113,7 @@ def import_reports(folder_path, project_root):
         f"{skipped_count} duplicates skipped, "
         f"{error_count} error pages skipped."
     )
+    return imported_count
 
 
 if __name__ == "__main__":

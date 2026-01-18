@@ -81,11 +81,11 @@ def import_reports_from_folder(
     print(f"Found {len(html_files)} HTML file(s)")
     print("Importing reports to database...")
 
-    import_reports(folder, config.project_root)
+    imported_count = import_reports(folder, config.project_root)
 
     print("Reports imported successfully")
 
-    return {"imported_count": len(html_files)}
+    return {"imported_count": imported_count}
 
 
 def match_politicians_to_reports(config: object) -> Dict[str, Any]:
