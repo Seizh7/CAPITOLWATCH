@@ -94,6 +94,9 @@ def initialize_database(config):
         last_updated TEXT,                  -- Last update timestamp
         data_source TEXT,                   -- Data source (e.g., API, Manual)
 
+        -- Analysis metadata
+        is_analyzable BOOLEAN,    -- Flag for analysis relevance
+
         -- Constraints
         UNIQUE(name, type)                  -- Prevent duplicates
     )
@@ -157,6 +160,7 @@ def initialize_database(config):
         ("idx_products_asset_class", "products", "asset_class"),
         ("idx_products_ticker", "products", "ticker"),
         ("idx_products_risk_rating", "products", "risk_rating"),
+        ("idx_products_analyzable", "products", "is_analyzable"),
         ("idx_products_name_type", "products", "name, type"),
         ("idx_assets_product_id", "assets", "product_id"),
         ("idx_assets_politician_id", "assets", "politician_id"),
