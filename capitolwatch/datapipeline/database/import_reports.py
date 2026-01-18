@@ -41,10 +41,11 @@ def import_reports(folder_path, project_root):
 
     print(f"Found {len(files)} HTML file(s) to import.")
 
-    # PHASE 1: Read all files and compute checksums BEFORE any renaming
+    # PHASE 1: Read all files, compute checksums, and ensure temp names
     # This prevents collisions when files are named 1.html, 2.html, etc.
     files_to_process = []
     error_count = 0
+    import uuid
 
     for file in files:
         # Check file size (skip small files that are likely error pages)
@@ -64,8 +65,17 @@ def import_reports(folder_path, project_root):
         # Compute SHA-1 checksum of the HTML content
         checksum = hashlib.sha1(html_content.encode("utf-8")).hexdigest()
 
+        # Move to temp name if not already (prevents collision during rename)
+        original_name = file.name
+        if not file.name.startswith("temp_"):
+            temp_name = f"temp_{uuid.uuid4().hex}.html"
+            temp_file = file.parent / temp_name
+            file.rename(temp_file)
+            file = temp_file
+
         files_to_process.append({
             'file': file,
+            'original_name': original_name,
             'checksum': checksum,
             'html_content': html_content
         })
@@ -76,6 +86,7 @@ def import_reports(folder_path, project_root):
 
     for file_data in files_to_process:
         file = file_data['file']
+        original_name = file_data['original_name']
         checksum = file_data['checksum']
 
         # Check if report already exists
@@ -83,8 +94,9 @@ def import_reports(folder_path, project_root):
         if existing:
             print(
                 f"Report {existing['id']} already exists "
-                f"(skipping {file.name})."
+                f"(skipping {original_name}). Deleting duplicate."
             )
+            file.unlink()  # Delete the duplicate file
             skipped_count += 1
             continue
 
@@ -105,7 +117,7 @@ def import_reports(folder_path, project_root):
         relative_path = str(new_filename.relative_to(project_root))
         update_report_source_file(report_id, relative_path)
 
-        print(f"Report {report_id} imported (renamed from {file.name}).")
+        print(f"Report {report_id} imported.")
         imported_count += 1
 
     print(
