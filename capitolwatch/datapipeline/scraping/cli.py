@@ -16,9 +16,6 @@ from typing import Optional
 
 import typer
 
-from capitolwatch.datapipeline.scraping.core import run_scraping
-from config import CONFIG
-
 
 app = typer.Typer()
 
@@ -56,6 +53,9 @@ def main(
     Examples:
         python -m capitolwatch.datapipeline.scraping --year 2023
     """
+    from capitolwatch.datapipeline.scraping.core import run_scraping
+    from config import CONFIG
+
     # Validate date formats if provided
     date_pattern = r'^\d{2}/\d{2}/\d{4}$'
 
