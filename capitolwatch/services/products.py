@@ -128,6 +128,47 @@ def get_products_without_enrichment(
             connection.close()
 
 
+def get_analyzable_products(
+    *,
+    config: Optional[object] = None,
+    connection=None
+) -> list[dict]:
+    """
+    Retrieve all products marked as analyzable for investment analysis.
+
+    Args:
+        config: Optional config override (defaults to global CONFIG).
+        connection: Optional existing SQLite connection to reuse.
+
+    Returns:
+        list[dict]: List of analyzable products with complete enrichment.
+    """
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            """
+            SELECT
+                id, name, type, ticker, sector, industry,
+                country, asset_class, beta, market_cap,
+                market_cap_tier, risk_rating,
+                international_exposure, geographic_classification
+            FROM products
+            WHERE is_analyzable = 1
+              AND ticker IS NOT NULL
+              AND ticker != ''
+            ORDER BY type, name
+            """
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        if close:
+            connection.close()
+
+
 def get_geographic_enrichment_stats(
     *,
     config: Optional[object] = None,

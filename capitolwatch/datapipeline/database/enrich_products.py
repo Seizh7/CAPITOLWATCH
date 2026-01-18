@@ -28,10 +28,10 @@ from capitolwatch.datapipeline.database.geographic_enrichment import (
 
 
 # ---------- Product Type Filtering ----------
-# Product types relevant for financial investment analysis
-# These products contain enrichable data (ticker, sector, etc.)
+# Relevant types for financial investment analysis
+# These products have enrichable data (ticker, sector, etc.)
 ANALYZABLE_PRODUCT_TYPES = {
-    # Listed equities
+    # Listed stocks
     'Corporate SecuritiesStock',
     'Corporate SecuritiesStock Option',
     'American Depository Receipt',
@@ -48,11 +48,11 @@ ANALYZABLE_PRODUCT_TYPES = {
     'Foreign BondsForeign Bond',
 }
 
-# Product types excluded from analysis (not relevant for clustering)
+# Types excluded from analysis (not relevant for clustering)
 # - Non-financial assets (real estate, farms)
-# - Containers without detailed contents (IRA, 401k, managed accounts)
-# - Insurance products and annuities
-# - Private, non-listed holdings
+# - Containers without detailed content (IRA, 401k, managed accounts)
+# - Insurance and annuity products
+# - Private unlisted holdings
 EXCLUDED_PRODUCT_TYPES = {
     # Bank deposits and accounts
     'Bank Deposit',
@@ -118,10 +118,10 @@ EXCLUDED_PRODUCT_TYPES = {
 
 def is_product_analyzable(product_type: str) -> bool:
     """
-    Determine whether a product type is relevant for analysis.
+    Determines if a product type is relevant for analysis.
 
     Args:
-        product_type: The financial product type.
+        product_type: Financial product type.
 
     Returns:
         True if the product should be enriched and analyzed.
@@ -135,8 +135,8 @@ def is_product_analyzable(product_type: str) -> bool:
     if product_type in EXCLUDED_PRODUCT_TYPES:
         return False
 
-    # By default include unknown types to avoid missing potentially
-    # interesting data
+    # By default, include unknown types to avoid missing
+    # potentially interesting data
     return True
 
 
@@ -387,7 +387,8 @@ def enrich_single_product(
 
     # Initialize enrichment data
     enrichment = {
-        'last_updated': datetime.now(timezone.utc).isoformat()
+        'last_updated': datetime.now(timezone.utc).isoformat(),
+        'is_analyzable': True  # Mark as analyzable
     }
 
     # --- Ticker extraction ---
