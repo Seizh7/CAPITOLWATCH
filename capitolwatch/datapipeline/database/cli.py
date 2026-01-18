@@ -16,16 +16,6 @@ from typing import Optional
 
 import typer
 
-from capitolwatch.datapipeline.database.core import (
-    initialize_db,
-    import_reports_from_folder,
-    match_politicians_to_reports,
-    parse_report_assets,
-    enrich_products_data,
-    run_complete_pipeline
-)
-from config import CONFIG
-
 
 app = typer.Typer(
     help="Build and manage the CAPITOLWATCH database",
@@ -45,6 +35,9 @@ def init():
     Example:
         python -m capitolwatch.datapipeline.database init
     """
+    from capitolwatch.datapipeline.database.core import initialize_db
+    from config import CONFIG
+
     try:
         result = initialize_db(CONFIG)
         typer.secho(
@@ -83,6 +76,11 @@ def import_reports(
         python -m capitolwatch.datapipeline.database import \\
             --folder data/reports
     """
+    from capitolwatch.datapipeline.database.core import (
+        import_reports_from_folder
+    )
+    from config import CONFIG
+
     folder_path = folder or CONFIG.output_folder
     try:
         result = import_reports_from_folder(folder_path, CONFIG)
@@ -111,6 +109,11 @@ def match():
     Example:
         python -m capitolwatch.datapipeline.database match
     """
+    from capitolwatch.datapipeline.database.core import (
+        match_politicians_to_reports
+    )
+    from config import CONFIG
+
     try:
         stats = match_politicians_to_reports(CONFIG)
 
@@ -156,6 +159,9 @@ def parse_assets(
         python -m capitolwatch.datapipeline.database parse \\
             --folder data/reports
     """
+    from capitolwatch.datapipeline.database.core import parse_report_assets
+    from config import CONFIG
+
     folder_path = folder or CONFIG.output_folder
     try:
         result = parse_report_assets(folder_path, CONFIG)
@@ -184,6 +190,9 @@ def enrich():
     Example:
         python -m capitolwatch.datapipeline.database enrich
     """
+    from capitolwatch.datapipeline.database.core import enrich_products_data
+    from config import CONFIG
+
     try:
         stats = enrich_products_data(CONFIG)
 
@@ -235,6 +244,9 @@ def pipeline(
         python -m capitolwatch.datapipeline.database pipeline \\
             --folder data/reports
     """
+    from capitolwatch.datapipeline.database.core import run_complete_pipeline
+    from config import CONFIG
+
     try:
         results = run_complete_pipeline(folder, CONFIG)
 
