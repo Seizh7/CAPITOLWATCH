@@ -1,371 +1,180 @@
-# Copyright (c) 2025 Seizh7
+# Copyright (c) 2026 Seizh7
 # Licensed under the Apache License, Version 2.0
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
 """
-Comprehensive geographic enrichment module for financial products.
-Provides unified geographic enrichment including country inference,
-geographic classification, and international exposure determination.
+Geographic enrichment module for financial products.
+Determines if a product is domestic (US-focused) or international.
 """
 
-import re
 from typing import Optional, Dict
 
 
-# ---------- Country Inference Methods ----------
+# Keywords indicating international exposure in fund/ETF names
+INTERNATIONAL_KEYWORDS = [
+    'international', 'intl', 'global', 'world',
+    'ex-us', 'ex us', 'ex-usa', 'ex usa', 'non-us', 'non us',
+    'europe', 'european', 'asia', 'pacific',
+    'latam', 'latin america', 'africa', 'middle east',
+    'china', 'japan', 'india', 'brazil', 'uk', 'germany', 'france',
+    'eafe', 'msci world', 'msci eafe',
+    'foreign', 'overseas', 'developed markets',
+    'emerging', 'emerging markets', 'em markets',
+    'non-us', 'non us', 'ex-united states'
+]
 
-def infer_country_from_exchange(
-    exchange: str, ticker: str = "", name: str = ""
-) -> Optional[str]:
-    """Infer country from exchange code, but only for domestic products."""
-    if not exchange:
-        return None
-
-    # Only infer US for clearly US-domestic products on US exchanges
-    if exchange.upper() in ['US', 'NYSE', 'NASDAQ', 'NYSEARCA', 'BATS']:
-        # Check if it's likely a foreign ADR or international listing
-        if ticker and name:
-            # ADR patterns (foreign companies on US exchanges)
-            adr_patterns = [
-                r'ADR|American.*Depositary',
-                r'Nestle|ASML|SAP|Toyota|Sony|Samsung',  # Foreign companies
-                r'\.L$|\.TO$|\.PA$|\.F$',  # Foreign ticker suffixes
-                r'Royal.*Dutch|Unilever|Novartis'
-            ]
-
-            combined_text = f"{ticker} {name}"
-            for pattern in adr_patterns:
-                if re.search(pattern, combined_text, re.IGNORECASE):
-                    return None  # Don't assume US for foreign companies
-
-        # For genuine US domestic products
-        return 'United States'
-
-    # Direct mapping for other exchanges (domestic companies)
-    exchange_mapping = {
-        'TSX': 'Canada',
-        'LSE': 'United Kingdom',
-        'FRA': 'Germany',
-        'PAR': 'France',
-        'AMS': 'Netherlands',
-        'SWX': 'Switzerland',
-        'TYO': 'Japan',
-        'HKG': 'Hong Kong',
-        'ASX': 'Australia'
-    }
-
-    return exchange_mapping.get(exchange.upper())
+# Keywords indicating US domestic focus
+US_DOMESTIC_KEYWORDS = [
+    "s&p", "sp500", "500", "nasdaq", "dow jones", "russell",
+    "total stock market", "qqq", "us ", "u.s.", "usa", "america"
+    "domestic", "us equity", "u.s. equity",
+]
 
 
-def infer_country_from_ticker_pattern(
-    ticker: str, name: str = ""
-) -> Optional[str]:
-    """Infer country from ticker patterns and company/fund names."""
-    if not ticker:
-        return None
-
-    ticker = ticker.upper()
-
-    # Specific company patterns by country
-    country_patterns = {
-        'United States': [
-            # Major US indices and ETFs
-            r'SPY|VOO|IVV|SPDR.*S&P|S&P.*500',
-            r'QQQ|NASDAQ.*100',
-            r'IWM|Russell.*2000',
-            r'DIA|DOW.*JONES',
-
-            # US sector ETFs
-            r'XL[EKFIVPUYB]|SPDR.*Select.*Sector',
-            r'VT[IEB]|Vanguard.*(Total.*Stock|FTSE.*US)',
-
-            # Major US companies
-            r'AAPL|Apple|MSFT|Microsoft|GOOGL|Alphabet|AMZN|Amazon',
-            r'TSLA|Tesla|META|Facebook|NVDA|Nvidia',
-            r'JPM|JP.*Morgan|BAC|Bank.*America|WFC|Wells.*Fargo',
-            r'JNJ|Johnson.*Johnson|PFE|Pfizer|KO|Coca.*Cola',
-            r'WMT|Walmart|HD|Home.*Depot|MCD|McDonald',
-
-            # US mutual fund families
-            r'Vanguard(?!.*Europe|.*International)',
-            r'Fidelity|American.*Funds|T\..*Rowe.*Price',
-            r'BlackRock.*US|iShares.*US|Invesco.*US',
-
-            # Explicit US terms
-            r'\bUS\b|USA|United.*States|American(?!.*Funds.*Europe)',
-            r'Dollar|Treasury|Federal.*Reserve'
-        ],
-
-        'Switzerland': [
-            r'Nestle|Nestlé|NSRGY',
-            r'Novartis|NVS',
-            r'Roche|RHHBY',
-            r'UBS|Credit.*Suisse',
-            r'Swiss|Switzerland|CHF'
-        ],
-
-        'Netherlands': [
-            r'ASML|ASMLY',
-            r'Royal.*Dutch|Shell.*Netherlands',
-            r'ING|ABN.*AMRO',
-            r'Unilever.*Netherlands'
-        ],
-
-        'Germany': [
-            r'SAP|Siemens|BMW|Mercedes|Volkswagen',
-            r'Deutsche|Bayer|BASF',
-            r'Adidas|Allianz'
-        ],
-
-        'Japan': [
-            r'Toyota|Sony|Nintendo|SoftBank',
-            r'Honda|Panasonic|Canon',
-            r'Nikkei|Tokyo|Japan|JPY'
-        ],
-
-        'Canada': [
-            r'Royal.*Bank.*Canada|RBC',
-            r'Shopify|SHOP|BlackBerry|Canadian',
-            r'Toronto|TSX|CAD.*Dollar'
-        ],
-
-        'United Kingdom': [
-            r'BP|British.*Petroleum|Vodafone',
-            r'HSBC|Barclays|Lloyds',
-            r'British|UK|United.*Kingdom|GBP'
-        ],
-
-        'South Korea': [
-            r'Samsung|LG|Hyundai|SK.*Telecom'
-        ],
-
-        'Taiwan': [
-            r'TSMC|Taiwan.*Semi|Foxconn'
-        ]
-    }
-
-    # Check patterns for each country
-    combined_text = f"{ticker} {name}" if name else ticker
-
-    for country, patterns in country_patterns.items():
-        for pattern in patterns:
-            if re.search(pattern, combined_text, re.IGNORECASE):
-                return country
-
-    return None
+# Funds with US managers but international focus (exceptions)
+US_MANAGER_INTERNATIONAL_FUNDS = [
+    'europacific',
+    "new perspective",
+    "new world",
+]
 
 
-def infer_country_from_currency(currency: str) -> Optional[str]:
-    """Infer country from currency (fallback method)."""
-    if not currency:
-        return None
-
-    currency_mapping = {
-        'USD': 'United States',
-        'CAD': 'Canada',
-        'EUR': 'Germany',  # Default eurozone
-        'GBP': 'United Kingdom',
-        'JPY': 'Japan',
-        'CHF': 'Switzerland',
-        'AUD': 'Australia',
-        'HKD': 'Hong Kong'
-    }
-
-    return currency_mapping.get(currency.upper())
-
-
-# ---------- Geographic Classification Methods ----------
-
-def classify_by_ticker_pattern(ticker: str) -> Optional[str]:
+def is_international_fund(name: str) -> bool:
     """
-    Classify a product geographically based on known ticker patterns.
+    Check if a fund/ETF name indicates international exposure.
 
     Args:
-        ticker (str): Product ticker symbol.
+        name: Product name.
 
     Returns:
-        Optional[str]: Geographic classification or None if no match.
-    """
-    if not ticker:
-        return None
-
-    ticker = ticker.upper()
-
-    # Common ETF ticker patterns
-    us_etf_patterns = [
-        r'^VT[ISMW]',              # Vanguard Total (VTI, VTS, VTW, etc.)
-        r'^SPY$', r'^QQQ$', r'^IWM$',  # Large-cap US
-        r'^EFA$', r'^VEA$',        # Developed markets ex-US
-        r'^VWO$', r'^EEM$',        # Emerging markets
-    ]
-
-    for pattern in us_etf_patterns:
-        if re.match(pattern, ticker):
-            if any(x in ticker for x in ['EFA', 'VEA', 'VWO', 'EEM']):
-                return 'International'
-            return 'US-Focused'
-
-    # Regional suffix patterns
-    if ticker.endswith('TO') or ticker.endswith('TSE'):
-        return 'Canada-Focused'
-    elif any(
-        suffix in ticker
-        for suffix in ['.L', '.LON', '.PA', '.FR', '.DE']
-    ):
-        return 'Europe-Focused'
-
-    return None
-
-
-def classify_by_name_analysis(name: str) -> Optional[str]:
-    """
-    Classify a product geographically based on its name.
-
-    Args:
-        name (str): Full product name.
-
-    Returns:
-        Optional[str]: Geographic classification or None if no match.
+        True if the fund appears to have international focus.
     """
     if not name:
-        return None
+        return False
 
     name_lower = name.lower()
 
-    # International keywords
-    international_keywords = [
-        'international', 'global', 'world', 'emerging', 'developed markets',
-        'ex-us', 'foreign', 'overseas', 'europe', 'asia', 'pacific',
-        'emerging markets', 'eafe', 'msci world'
-    ]
-    if any(keyword in name_lower for keyword in international_keywords):
-        return 'International'
+    # Check for international keywords
+    for keyword in INTERNATIONAL_KEYWORDS:
+        if keyword in name_lower:
+            return True
 
-    # US-focused keywords
-    us_keywords = [
-        'us ', 'u.s.', 'united states', 'america', 'domestic',
-        'nasdaq', 's&p 500', 'russell', 'dow jones'
-    ]
-    if any(keyword in name_lower for keyword in us_keywords):
-        return 'US-Focused'
-
-    # Regional specifics
-    if any(word in name_lower for word in ['canada', 'canadian', 'toronto']):
-        return 'Canada-Focused'
-    elif any(
-        word in name_lower
-        for word in ['europe', 'european', 'eurozone']
-    ):
-        return 'Europe-Focused'
-
-    return None
+    return False
 
 
-# ---------- Unified Enrichment Functions ----------
-
-def infer_country_for_product(product: Dict) -> Optional[str]:
+def is_us_manager_international_fund(name: str) -> bool:
     """
-    Infer country for a product using all available methods.
+    Check if a fund has a US manager but international focus.
 
     Args:
-        product: Dict with product data (ticker, name, exchange, currency).
+        name: Product name.
 
     Returns:
-        Inferred country or None.
+        True if the fund is managed by US firm but invests internationally.
     """
-    # Skip if country already exists
-    if product.get('country'):
-        return product['country']
+    if not name:
+        return False
 
-    ticker = product.get('ticker', '')
+    name_lower = name.lower()
+
+    for keyword in US_MANAGER_INTERNATIONAL_FUNDS:
+        if keyword in name_lower:
+            return True
+
+    return False
+
+
+def is_us_focused_fund(name: str) -> bool:
+    """
+    Check if a fund/ETF name indicates US domestic focus.
+
+    Args:
+        name: Product name.
+
+    Returns:
+        True if the fund appears to be US-focused.
+    """
+    if not name:
+        return False
+
+    name_lower = name.lower()
+
+    # Check for US-focused keywords
+    for keyword in US_DOMESTIC_KEYWORDS:
+        if keyword in name_lower:
+            return True
+
+    return False
+
+
+def determine_is_domestic(product: Dict) -> Optional[bool]:
+    """
+    Determine if a product is domestic (US-focused) or international.
+
+    Logic:
+    1. For stocks/bonds: Use country field from Yahoo Finance
+       - country == 'United States' -> is_domestic = True
+       - country != 'United States' -> is_domestic = False
+
+    2. For ETFs/Mutual Funds: Analyze the fund name
+       - International keywords -> is_domestic = False
+       - US manager with international focus -> is_domestic = False
+       - US-focused keywords -> is_domestic = True
+       - US fund manager (without intl keywords) -> is_domestic = True
+       - Otherwise, use country field as fallback
+
+    Args:
+        product: Dict with product data (name, country, is_etf,
+            is_mutual_fund)
+
+    Returns:
+        True if domestic (US-focused), False if international, None if unknown.
+    """
     name = product.get('name', '')
-    exchange = product.get('exchange', '')
-    currency = product.get('currency', '')
+    country = product.get('country', '')
+    is_etf = product.get('is_etf', False)
+    is_mutual_fund = product.get('is_mutual_fund', False)
 
-    # Method 1: Pattern-based inference (most reliable for company origin)
-    country = infer_country_from_ticker_pattern(ticker, name)
-    if country:
-        return country
+    # For funds/ETFs: analyze the name first
+    if is_etf or is_mutual_fund:
+        # Priority 1: Check for explicit international keywords
+        if is_international_fund(name):
+            return False
 
-    # Method 2: Exchange-based inference (only for domestic products)
-    country = infer_country_from_exchange(exchange, ticker, name)
-    if country:
-        return country
+        # Priority 2: Check for US manager with international mandate
+        if is_us_manager_international_fund(name):
+            return False
 
-    # Method 3: Currency-based inference (fallback)
-    country = infer_country_from_currency(currency)
+        # Priority 3: Check for US-focused keywords (S&P 500, Russell, etc.)
+        if is_us_focused_fund(name):
+            return True
+
+        # Fallback to country if available
+        if country:
+            return country == 'United States'
+
+        return None
+
+    # For individual stocks/bonds: use country directly
     if country:
-        return country
+        return country == 'United States'
 
     return None
-
-
-def classify_product_geography(product_name: str) -> Dict[str, str]:
-    """
-    Determine a product's geographic classification based on its ticker or
-    name.
-
-    Args:
-        product_name (str): Product name.
-
-    Returns:
-        Dict[str, str]: Dictionary containing:
-            - international_exposure (Yes/No)
-            - geographic_classification (str)
-    """
-    # Extract ticker if available at the start of the product name
-    ticker_match = re.match(r'^([A-Z]{1,5})\s*-', product_name)
-    ticker = ticker_match.group(1) if ticker_match else None
-
-    # Try classification by ticker
-    classification = None
-    if ticker:
-        classification = classify_by_ticker_pattern(ticker)
-
-    # Fallback to classification by name
-    if not classification:
-        classification = classify_by_name_analysis(product_name)
-
-    # Default classification
-    if not classification:
-        classification = 'Unknown'
-
-    # Determine international exposure flag
-    international_exposure = (
-        'Yes' if classification == 'International' else 'No'
-    )
-
-    return {
-        'international_exposure': international_exposure,
-        'geographic_classification': classification
-    }
 
 
 def enrich_product_geography(product: Dict) -> Dict[str, any]:
     """
-    Comprehensive geographic enrichment for a single product.
+    Geographic enrichment for a single product.
 
     Args:
-        product: Dict with product data (id, name, ticker, exchange,
-                 currency, country).
+        product: Dict with product data (name, country, is_etf, is_mutual_fund)
 
     Returns:
-        Dict with all geographic enrichment data:
-        - country (if not already present)
-        - international_exposure
-        - geographic_classification
+        Dict with geographic enrichment: {'is_domestic': bool or None}
     """
-    enrichment = {}
+    is_domestic = determine_is_domestic(product)
 
-    # 1. Country inference
-    country = infer_country_for_product(product)
-    if country and not product.get('country'):
-        enrichment['country'] = country
+    if is_domestic is not None:
+        return {'is_domestic': is_domestic}
 
-    # 2. Geographic classification based on name
-    product_name = product.get('name', '')
-    if product_name:
-        geo_classification = classify_product_geography(product_name)
-        enrichment.update(geo_classification)
-
-    return enrichment
+    return {}

@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Seizh7
+# Copyright (c) 2026 Seizh7
 # Licensed under the Apache License, Version 2.0
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -56,6 +56,7 @@ def initialize_database(config):
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
+        subtype TEXT,
 
         -- Financial identifiers
         figi TEXT,                          -- Bloomberg Global Identifier
@@ -74,6 +75,10 @@ def initialize_database(config):
         expense_ratio REAL,                 -- Expense ratio (for funds)
         market_cap BIGINT,                  -- Market capitalization
 
+        -- Fund-specific metadata
+        fund_family TEXT,                   -- Fund provider
+        category TEXT,                      -- Fund category
+
         -- Trading metadata
         currency TEXT,                      -- Main currency
         is_etf BOOLEAN,                     -- ETF flag
@@ -85,17 +90,14 @@ def initialize_database(config):
         risk_rating TEXT,                   -- Risk level
 
         -- Geographic classification
-        international_exposure TEXT,
-        -- (e.g., "US", "International", "Global")
-        geographic_classification TEXT,
-        -- (e.g., "North America", "Europe")
+        is_domestic BOOLEAN,                -- True if US-domiciled/focused
 
         -- Enrichment metadata
         last_updated TEXT,                  -- Last update timestamp
         data_source TEXT,                   -- Data source (e.g., API, Manual)
 
         -- Analysis metadata
-        is_analyzable BOOLEAN,    -- Flag for analysis relevance
+        is_analyzable BOOLEAN,              -- Flag for analysis relevance
 
         -- Constraints
         UNIQUE(name, type)                  -- Prevent duplicates
@@ -112,6 +114,7 @@ def initialize_database(config):
         owner TEXT,                             -- Who owns the asset
         value TEXT,                             -- Value or value range
         income_type TEXT,                       -- Type of income generated
+        income_subtype TEXT,                    -- Income subtype
         income TEXT,                            -- Amount of income
         comment TEXT,                           -- Any comments or notes
         parent_asset_id INTEGER,                -- Incase of hierarchical asset

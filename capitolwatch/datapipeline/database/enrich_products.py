@@ -9,7 +9,6 @@ Enhances database products with financial metadata and geographic information.
 """
 
 import re
-import time
 import json
 import requests
 import yfinance as yf
@@ -32,20 +31,15 @@ from capitolwatch.datapipeline.database.geographic_enrichment import (
 # These products have enrichable data (ticker, sector, etc.)
 ANALYZABLE_PRODUCT_TYPES = {
     # Listed stocks
-    'Corporate SecuritiesStock',
-    'Corporate SecuritiesStock Option',
+    'Corporate Securities',
     'American Depository Receipt',
 
     # Investment funds
-    'Mutual FundsMutual Fund',
-    'Mutual FundsExchange Traded Fund/Note',
-    'Mutual FundsStable Value Fund',
+    'Mutual Funds',
 
     # Bonds (partially enrichable)
-    'Corporate SecuritiesCorporate Bond',
-    'Government SecuritiesUS Treasury/Agency Security',
-    'Government SecuritiesMunicipal Security',
-    'Foreign BondsForeign Bond',
+    'Government Securities',
+    'Foreign Bonds',
 }
 
 # Types excluded from analysis (not relevant for clustering)
@@ -59,58 +53,36 @@ EXCLUDED_PRODUCT_TYPES = {
     'Brokerage/Managed Account',
 
     # Insurance and annuities
-    'Life InsuranceWhole',
-    'Life InsuranceUniversal',
-    'Life InsuranceVariable',
-    'AnnuityFixed',
-    'AnnuityVariable Annuity',
+    'Life Insurance',
+    'Annuity',
 
     # Real estate and physical assets
-    'Real EstateResidential',
-    'Real EstateCommercial',
-    'Real EstateUnimproved Land',
-    'Real EstateMineral Rights',
-    'Real EstateREIT',
+    'Real Estate',
     'Farm',
-    'Personal PropertyOther Property',
+    'Personal Property',
 
     # Private business entities
-    'Business EntityLimited Liability Company (LLC)',
-    'Business EntityLimited Partnership (LP)',
-    'Business EntityLimited Liability Limited Partnership (LLLP)',
-    'Business EntityGeneral Partnership',
-    'Business EntitySole Proprietorship',
-    'Corporate SecuritiesNon-Public Stock',
+    'Business Entity',
 
     # Retirement plans (containers)
-    'Retirement PlansIRA',
-    'Retirement Plans401(k), 403(b), or other Defined Contribution Plan.',
-    'Retirement PlansDefined Benefit Pension Plan',
-    'Retirement PlansDeferred Compensation',
+    'Retirement Plans',
 
     # Deferred compensation
     'Deferred Compensation',
-    'Deferred CompensationDeferred Compensation - Other',
-    'Deferred CompensationDeferred Compensation - Cash',
 
     # Trusts and fiduciaries
-    'TrustGeneral Trust',
-    'TrustBlind',
-    'TrustExcepted',
+    'Trust',
 
     # Education savings
-    'Education Savings Plans529 College Savings Plan',
+    'Education Savings Plans',
     'UGMA/UTMA',
 
     # Private funds (not enrichable via API)
-    'Investment FundPrivate Equity Fund',
-    'Investment FundHedge Fund',
-    'Investment FundInvestment Club',
+    'Investment Fund',
 
     # Other
-    'Accounts ReceivableFrom a Business',
-    'Accounts ReceivableFrom an Individual',
-    'Intellectual PropertyCopyrights',
+    'Accounts Receivable',
+    'Intellectual Property',
     'Cryptocurrency',
     'Other',
 }
@@ -232,6 +204,7 @@ def get_yahoo_security_info(ticker: str) -> Optional[Dict]:
         info = stock.info
         if not info or 'symbol' not in info:
             return None
+
         return {
             'symbol': info.get('symbol'),
             'name': info.get('longName') or info.get('shortName'),
@@ -243,7 +216,9 @@ def get_yahoo_security_info(ticker: str) -> Optional[Dict]:
             'beta': info.get('beta'),
             'dividend_yield': info.get('dividendYield'),
             'expense_ratio': info.get('annualReportExpenseRatio'),
-            'asset_class_yahoo': info.get('quoteType')  # EQUITY, ETF
+            'asset_class_yahoo': info.get('quoteType'),
+            'fund_family': info.get('fundFamily'),
+            'category': info.get('category')
         }
 
     except Exception as e:
@@ -345,18 +320,33 @@ def calculate_risk_rating(
 
 def determine_fund_flags(name: str, asset_class: str) -> Dict[str, bool]:
     """
-    Determines fund type flags.
+    Determines fund flags based on name and API-derived asset class.
 
     Args:
         name (str): Product name.
-        asset_class (str): Asset class.
+        asset_class (str): Asset class from API data (more reliable than HTML).
+
     Returns:
-        Dict[str, bool]: Flags indicating fund types.
+        Dict[str, bool]: Flags for is_etf, is_mutual_fund, and is_index_fund.
     """
     name_lower = name.lower() if name else ""
+
+    # Use asset_class (from APIs) to override HTML-based classification
+    # as it's more accurate and reliable
+    if asset_class == 'ETF':
+        is_etf = True
+        is_mutual_fund = False
+    elif asset_class == 'Mutual Fund':
+        is_etf = False
+        is_mutual_fund = True
+    else:
+        # For non-fund assets, both flags are False
+        is_etf = False
+        is_mutual_fund = False
+
     return {
-        'is_etf': asset_class == 'ETF',
-        'is_mutual_fund': asset_class == 'Mutual Fund',
+        'is_etf': is_etf,
+        'is_mutual_fund': is_mutual_fund,
         'is_index_fund': 'index' in name_lower
     }
 
@@ -401,12 +391,10 @@ def enrich_single_product(
         try:
             # Create product dict for geographic enrichment
             product_dict = {
-                'id': product_id,
                 'name': name,
-                'ticker': None,
-                'exchange': None,
-                'currency': None,
-                'country': None
+                'country': None,
+                'is_etf': False,
+                'is_mutual_fund': False
             }
             geo_data = enrich_product_geography(product_dict)
             if geo_data:
@@ -462,7 +450,9 @@ def enrich_single_product(
                 'market_cap': yahoo_data.get('market_cap'),
                 'beta': yahoo_data.get('beta'),
                 'dividend_yield': yahoo_data.get('dividend_yield'),
-                'expense_ratio': yahoo_data.get('expense_ratio')
+                'expense_ratio': yahoo_data.get('expense_ratio'),
+                'fund_family': yahoo_data.get('fund_family'),
+                'category': yahoo_data.get('category')
             })
 
         # Derived classifications
@@ -485,30 +475,42 @@ def enrich_single_product(
         )
         enrichment['risk_rating'] = risk_rating
 
-        # Fund flags
-        enrichment.update(determine_fund_flags(name, asset_class))
+        # Fund flags: Use API-derived asset_class to correct
+        # HTML-based classification. This overrides is_etf/is_mutual_fund
+        # from HTML since API data is more reliable
+        fund_flags = determine_fund_flags(name, asset_class)
+        enrichment.update(fund_flags)
+
+        is_etf_different = (
+            fund_flags['is_etf'] != product.get('is_etf', False)
+        )
+        is_mutual_different = (
+            fund_flags['is_mutual_fund'] !=
+            product.get('is_mutual_fund', False)
+        )
+        if is_etf_different or is_mutual_different:
+            print(
+                f"  Corrected fund type: "
+                f"ETF={fund_flags['is_etf']}, "
+                f"Mutual={fund_flags['is_mutual_fund']} "
+                f"(was ETF={product.get('is_etf', False)}, "
+                f"Mutual={product.get('is_mutual_fund', False)})"
+            )
 
     # --- Geographic enrichment ---
     try:
-        # Create comprehensive product dict for geographic enrichment
+        # Create product dict for geographic enrichment
+        # Use existing is_etf/is_mutual_fund from product (HTML source)
         product_dict = {
-            'id': product_id,
             'name': name,
-            'ticker': enrichment.get('ticker'),
-            'exchange': enrichment.get('exchange'),
-            'currency': enrichment.get('currency'),
-            'country': enrichment.get('country')
+            'country': enrichment.get('country'),
+            'is_etf': product.get('is_etf', False),
+            'is_mutual_fund': product.get('is_mutual_fund', False)
         }
         geo_data = enrich_product_geography(product_dict)
         if geo_data:
             enrichment.update(geo_data)
             print("  Geographic enrichment applied")
-
-            # Update data source to reflect both financial and geographic
-            if enrichment['data_source'] != 'API_Failed':
-                enrichment['data_source'] = (
-                    enrichment['data_source'] + '+Geographic'
-                )
     except Exception as e:
         print(f"  Geographic enrichment failed: {e}")
 
@@ -520,23 +522,20 @@ def run_enrichment_pipeline(
     start_from: int = 0
 ) -> Dict:
     """
-    Run the comprehensive product enrichment pipeline with financial and
-    geographic data.
+    Run the product enrichment pipeline.
 
     Args:
-        limit (Optional[int]): Maximum number of products to process. Defaults
-        to None.
+        limit (Optional[int]): Maximum number of products to process.
         start_from (int): Starting index. Defaults to 0.
 
     Returns:
-        Dict: Statistics dictionary containing counts and processing metadata.
+        Dict: Statistics dictionary.
     """
-    print("Starting comprehensive product enrichment pipeline")
+    print("Starting product enrichment pipeline")
 
     # Retrieve products to enrich
     conn = get_connection(CONFIG)
     products = get_products_without_enrichment(connection=conn)
-    conn.close()
 
     total_products = len(products)
     print(f"{total_products} products to process")
@@ -563,73 +562,55 @@ def run_enrichment_pipeline(
         'start_time': datetime.now()
     }
 
-    # Processing loop
+    # Process each product
     for i, product in enumerate(products, 1):
-        print(f"\n[{i}/{len(products)}] Processing product {product['id']}")
+        print(f"\n[{i}/{len(products)}] {product['name'][:50]}...")
 
         try:
-            # Perform enrichment (financial + geographic)
-            enrichment_data = enrich_single_product(
-                product,
-                openfigi_session
-            )
+            enrichment_data = enrich_single_product(product, openfigi_session)
 
-            # Skip if product type is not analyzable
             if enrichment_data is None:
                 stats['skipped_non_analyzable'] += 1
                 stats['total_processed'] += 1
                 continue
 
-            # Update in database
-            conn = get_connection(CONFIG)
-            success = enrich_product(
-                product['id'],
-                enrichment_data,
-                connection=conn
-            )
-            conn.commit()
-            conn.close()
+            # Update database
+            enrich_product(product['id'], enrichment_data, connection=conn)
 
-            if success:
-                data_source = enrichment_data.get('data_source', '')
-                if data_source == 'Manual_NonTradeable':
-                    stats['non_tradeable'] += 1
-                elif 'Failed' in data_source:
-                    stats['failed'] += 1
-                else:
-                    stats['enriched'] += 1
-                    if 'Geographic' in data_source:
-                        stats['geographic_enriched'] += 1
-            else:
+            # Update stats
+            data_source = enrichment_data.get('data_source', '')
+            if data_source == 'Manual_NonTradeable':
+                stats['non_tradeable'] += 1
+            elif 'Failed' in data_source:
                 stats['failed'] += 1
-                print("  Database update failed")
+            else:
+                stats['enriched'] += 1
+                if enrichment_data.get('is_domestic') is not None:
+                    stats['geographic_enriched'] += 1
 
         except Exception as e:
-            print(f"  Error during enrichment: {e}")
+            print(f"  Error: {e}")
             stats['failed'] += 1
 
         stats['total_processed'] += 1
 
-        # Rate limiting to avoid API overload
-        time.sleep(0.5)
+        # Commit every 100 products
+        if i % 100 == 0:
+            conn.commit()
+
+    conn.commit()
+    conn.close()
 
     # Final report
     duration = datetime.now() - stats['start_time']
 
-    print("\nComprehensive Product Enrichment Report")
+    print("\n=== Enrichment Report ===")
     print(f"Duration: {duration}")
     print(f"Total processed: {stats['total_processed']}")
-    print(f"Skipped (non-analyzable types): {stats['skipped_non_analyzable']}")
-    print(f"Successfully enriched: {stats['enriched']}")
-    print(f"Geographic enriched: {stats['geographic_enriched']}")
+    print(f"Skipped (non-analyzable): {stats['skipped_non_analyzable']}")
+    print(f"Enriched: {stats['enriched']}")
     print(f"Non-tradeable: {stats['non_tradeable']}")
-    print(f"Failures: {stats['failed']}")
-
-    skipped = stats['skipped_non_analyzable']
-    analyzable_total = stats['total_processed'] - skipped
-    if analyzable_total > 0:
-        success_rate = (stats['enriched'] / analyzable_total) * 100
-        print(f"Success rate (analyzable only): {success_rate:.1f}%")
+    print(f"Failed: {stats['failed']}")
 
     return stats
 

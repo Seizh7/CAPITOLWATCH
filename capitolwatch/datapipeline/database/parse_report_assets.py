@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Seizh7
+# Copyright (c) 2026 Seizh7
 # Licensed under the Apache License, Version 2.0
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -99,12 +99,18 @@ def process_assets_parsing(html_file_path: str) -> Optional[str]:
         for asset in assets_sorted:
             name = (asset.get("name") or "").strip()
             product_type = (asset.get("type") or "Unknown").strip()
+            product_subtype = (asset.get("subtype") or "").strip()
             if not name:
                 continue  # skip nameless rows
 
             # 1) Ensure product exists and get product_id
+            product_data = {
+                "name": name,
+                "type": product_type,
+                "subtype": product_subtype,
+            }
             product_id = add_product(
-                {"name": name, "type": product_type},
+                product_data,
                 connection=conn,
                 config=CONFIG,
             )
@@ -123,6 +129,7 @@ def process_assets_parsing(html_file_path: str) -> Optional[str]:
                 "value": asset.get("value"),
                 "income_type": asset.get("income_type"),
                 "income": asset.get("income"),
+                "income_subtype": asset.get("income_subtype"),
                 "comment": asset.get("comment"),
                 "parent_asset_id": parent_asset_id,
             }

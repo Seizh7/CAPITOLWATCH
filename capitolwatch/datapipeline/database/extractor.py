@@ -77,6 +77,72 @@ def clean_text(text):
     return text if text not in ("", "None") else None
 
 
+def extract_main_text(element):
+    """
+    Extract only the main text from an element, ignoring nested divs.
+
+    This is useful for cells like:
+        <td>Mutual Funds<div class="muted">Mutual Fund</div></td>
+    Where we only want "Mutual Funds", not "Mutual FundsMutual Fund".
+
+    Args:
+        element: BeautifulSoup element.
+
+    Returns:
+        str or None: The main text content, cleaned.
+    """
+    if not element:
+        return None
+
+    # Get only the direct text content (not from child elements)
+    texts = []
+    for child in element.children:
+        if isinstance(child, str):
+            texts.append(child.strip())
+        # Stop at the first div (which contains the sub-type)
+        elif child.name == 'div':
+            break
+
+    main_text = ' '.join(t for t in texts if t)
+    if main_text:
+        return clean_text(main_text)
+    return clean_text(element.get_text())
+
+
+def extract_type_with_subtype(element):
+    """
+    Extract both main type and subtype from a cell.
+
+    For cells like:
+        <td>Mutual Funds<div class="muted">Exchange Traded Fund/Note</div></td>
+
+    Returns:
+        tuple: (main_type, subtype) - subtype may be None
+    """
+    if not element:
+        return None, None
+
+    # Get the main text (before any div)
+    main_texts = []
+    for child in element.children:
+        if isinstance(child, str):
+            main_texts.append(child.strip())
+        elif child.name == 'div':
+            break
+
+    main_type = clean_text(' '.join(t for t in main_texts if t))
+
+    # Get the subtype from the muted div
+    muted_div = element.find('div', class_='muted')
+    subtype = clean_text(muted_div.get_text()) if muted_div else None
+
+    # If no main text was found, use full text as fallback
+    if not main_type:
+        main_type = clean_text(element.get_text())
+
+    return main_type, subtype
+
+
 def extract_assets(soup):
     """
     Parses the 'Part 3. Assets' table from the HTML soup and returns a list of
@@ -116,11 +182,14 @@ def extract_assets(soup):
         # Extract datas
         strong = cols[1].find("strong")
         asset_name = clean_text(strong.get_text())
-        asset_type = clean_text(cols[2].get_text())
+        # For asset_type, extract both main type and subtype
+        # (e.g., "Mutual Funds" + "Exchange Traded Fund/Note")
+        asset_type, asset_subtype = extract_type_with_subtype(cols[2])
         owner = clean_text(cols[3].get_text())
         value = clean_text(cols[4].get_text())
-        income_type = clean_text(cols[5].get_text())
-        income = clean_text(cols[6].get_text())
+        income_type = extract_main_text(cols[5])
+        # Income may also have a sub-value in muted div
+        income, income_subtype = extract_type_with_subtype(cols[6])
 
         # Optionally extract a filer comment if present, e.g.:
         # <div class="muted"><em>Filer comment: </em>Your text...</div>
@@ -155,10 +224,12 @@ def extract_assets(soup):
             "parent_index": parent_index,
             "name": asset_name,
             "type": asset_type,
+            "subtype": asset_subtype,
             "owner": owner,
             "value": value,
             "income_type": income_type,
             "income": income,
+            "income_subtype": income_subtype,
             "comment": comment
         }
         assets.append(asset)
