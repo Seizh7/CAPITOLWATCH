@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Seizh7
+# Copyright (c) 2026 Seizh7
 # Licensed under the Apache License, Version 2.0
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -132,8 +132,8 @@ def get_politician_assets_simple(
             """
             SELECT product_id, value
             FROM assets
-            WHERE politician_id = ? 
-              AND value IS NOT NULL 
+            WHERE politician_id = ?
+              AND value IS NOT NULL
               AND value != ''
             ORDER BY id
             """,
@@ -163,6 +163,7 @@ def add_asset(
             - value (float or str)
             - income_type (str)
             - income (str or float)
+            - income_subtype (str, optional)
             - comment (str)
             - parent_asset_id (int | None)
         config (Optional[object]): Optional config override.
@@ -181,9 +182,9 @@ def add_asset(
             """
             INSERT INTO assets (
                 report_id, politician_id, product_id, owner, value,
-                income_type, income, comment, parent_asset_id
+                income_type, income, income_subtype, comment, parent_asset_id
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 report_id,
@@ -193,6 +194,7 @@ def add_asset(
                 asset.get("value"),
                 asset.get("income_type"),
                 asset.get("income"),
+                asset.get("income_subtype"),
                 asset.get("comment"),
                 asset.get("parent_asset_id"),
             ),

@@ -1,3 +1,7 @@
+# Copyright (c) 2026 Seizh7
+# Licensed under the Apache License, Version 2.0
+# (http://www.apache.org/licenses/LICENSE-2.0)
+
 """
 Product services: CRUD and helpers for the products table.
 
@@ -107,7 +111,8 @@ def get_products_without_enrichment(
         connection: Optional existing SQLite connection to reuse.
 
     Returns:
-        list[dict]: List of products with keys {id, name, type}.
+        list[dict]: List of products with keys {id, name, type, is_etf,
+                    is_mutual_fund}.
     """
     close = False
     if connection is None:
@@ -117,7 +122,7 @@ def get_products_without_enrichment(
         cur = connection.cursor()
         cur.execute(
             """
-            SELECT id, name, type
+            SELECT id, name, type, is_etf, is_mutual_fund
             FROM products
             WHERE data_source = 'Manual' AND ticker IS NULL
             """
@@ -154,8 +159,7 @@ def get_analyzable_products(
             SELECT
                 id, name, type, ticker, sector, industry,
                 country, asset_class, beta, market_cap,
-                market_cap_tier, risk_rating,
-                international_exposure, geographic_classification
+                market_cap_tier, risk_rating, is_domestic
             FROM products
             WHERE is_analyzable = 1
               AND ticker IS NOT NULL
@@ -191,32 +195,20 @@ def get_geographic_enrichment_stats(
         cur.execute('''
             SELECT
                 COUNT(*) as total_products,
-                COUNT(international_exposure) as geo_enriched,
-                COUNT(geographic_classification) as region_classified
+                COUNT(is_domestic) as geo_enriched,
+                SUM(CASE WHEN is_domestic = 1 THEN 1 ELSE 0 END) as domestic,
+                SUM(CASE WHEN is_domestic = 0 THEN 1 ELSE 0 END) as intl
             FROM products
-            WHERE ticker IS NOT NULL AND ticker != "Manual"
+            WHERE ticker IS NOT NULL AND ticker != 'Manual'
         ''')
 
-        total, geo_enriched, region_classified = cur.fetchone()
-
-        # Distribution by region
-        cur.execute('''
-            SELECT
-                geographic_classification,
-                COUNT(*) as count
-            FROM products
-            WHERE geographic_classification IS NOT NULL
-            GROUP BY geographic_classification
-            ORDER BY count DESC
-        ''')
-
-        regions = dict(cur.fetchall())
+        total, geo_enriched, domestic, international = cur.fetchone()
 
         return {
             'total_products': total,
             'geo_enriched': geo_enriched,
-            'region_classified': region_classified,
-            'regions': regions,
+            'domestic_count': domestic or 0,
+            'international_count': international or 0,
             'coverage_rate': (geo_enriched / total * 100) if total > 0 else 0
         }
 
@@ -225,8 +217,8 @@ def get_geographic_enrichment_stats(
             'error': str(e),
             'total_products': 0,
             'geo_enriched': 0,
-            'region_classified': 0,
-            'regions': {},
+            'domestic_count': 0,
+            'international_count': 0,
             'coverage_rate': 0
         }
     finally:
@@ -384,12 +376,14 @@ def add_product(
     Expected keys in `product`:
       - name (str, required)
       - type (str, required)
+      - subtype (str, optional)
       - All other fields are optional (figi, ticker, etc.)
 
     Behavior:
       - Uses INTEGER PRIMARY KEY auto-generation for id.
       - If a conflicting row already exists (same name,type),
         the existing id is returned.
+      - Sets is_etf and is_mutual_fund based on subtype if provided.
 
     Returns:
       id (int)
@@ -400,10 +394,23 @@ def add_product(
 
     name = product.get("name")
     product_type = product.get("type")
+    subtype = product.get("subtype", "")
     if not name or not product_type:
         raise ValueError("'name' and 'type' are required to create a product")
 
     ticker = normalize_ticker(product.get("ticker"))
+
+    # Determine is_etf and is_mutual_fund from subtype
+    is_etf = None
+    is_mutual_fund = None
+    if subtype:
+        subtype_lower = subtype.lower()
+        if "exchange traded" in subtype_lower or "etf" in subtype_lower:
+            is_etf = True
+            is_mutual_fund = False
+        elif "mutual fund" in subtype_lower:
+            is_etf = False
+            is_mutual_fund = True
 
     try:
         cur = connection.cursor()
@@ -431,10 +438,14 @@ def add_product(
         # Insert new product with basic fields only
         cur.execute(
             """
-            INSERT INTO products (name, type, ticker, data_source)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO products
+            (name, type, subtype, ticker, is_etf, is_mutual_fund, data_source)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (name, product_type, ticker, "Manual"),
+            (
+                name, product_type, subtype, ticker, is_etf,
+                is_mutual_fund, "Manual"
+            ),
         )
         new_id = int(cur.lastrowid)
         if close:
@@ -476,8 +487,8 @@ def enrich_product(
             'asset_class', 'beta', 'dividend_yield', 'expense_ratio',
             'market_cap', 'currency', 'is_etf', 'is_mutual_fund',
             'is_index_fund', 'market_cap_tier', 'risk_rating',
-            'last_updated', 'data_source', 'international_exposure',
-            'geographic_classification'
+            'last_updated', 'data_source', 'is_domestic', 'is_analyzable',
+            'fund_family', 'category'
         }
 
         sets = []
