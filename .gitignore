@@ -5,3 +5,5 @@
 data/*
 !data/.gitkeep
 .env
+.github
+.docs
