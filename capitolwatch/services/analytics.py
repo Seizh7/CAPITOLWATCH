@@ -1,4 +1,4 @@
-# Copyright (c) 2025 Seizh7
+# Copyright (c) 2026 Seizh7
 # Licensed under the Apache License, Version 2.0
 # (http://www.apache.org/licenses/LICENSE-2.0)
 
@@ -268,6 +268,111 @@ def get_politician_asset_counts(
     WHERE pr.sector IS NOT NULL
     GROUP BY p.id, p.first_name, p.last_name, p.party
     ORDER BY total_assets DESC
+    """
+
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        return pd.read_sql_query(query, connection)
+    finally:
+        if close:
+            connection.close()
+
+
+def get_active_politicians_dataframe(
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> pd.DataFrame:
+    """
+    Get all politicians who have at least one asset.
+
+    This is the base dataset for clustering analysis.
+
+    Args:
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        DataFrame with columns: [id, first_name, last_name, party]
+    """
+    query = """
+        SELECT DISTINCT
+            p.id,
+            p.first_name,
+            p.last_name,
+            p.party
+        FROM politicians p
+        INNER JOIN reports r ON p.id = r.politician_id
+        INNER JOIN assets a ON r.id = a.report_id
+        ORDER BY p.last_name, p.first_name
+    """
+
+    close = False
+    if connection is None:
+        connection, close = get_connection(config or CONFIG), True
+
+    try:
+        return pd.read_sql_query(query, connection)
+    finally:
+        if close:
+            connection.close()
+
+
+def get_assets_with_products_dataframe(
+    *,
+    config: Optional[object] = None,
+    connection=None,
+) -> pd.DataFrame:
+    """
+    Get all assets enriched with product information for active politicians.
+
+    Performs INNER JOIN between:
+        - assets table
+        - products table (product details)
+        - reports table (link to politicians)
+        - politicians table (filter active only)
+
+    Args:
+        config: Optional config override.
+        connection: Optional existing DB connection to reuse.
+
+    Returns:
+        DataFrame with columns:
+            - asset_id: ID of the asset
+            - politician_id: ID of the politician
+            - product_id: ID of the product
+            - value: String representation of value range
+            - product_name: Name of the product
+            - subtype: Product subtype (e.g., 'Stock', 'Mutual Fund')
+
+        Returns all assets with values for active politicians, including:
+            - Standalone assets (bank accounts, pension plans)
+            - Child assets (mutual funds within IRAs)
+        Excludes only empty asset containers (IRAs, 401k without direct values)
+    """
+    query = """
+        SELECT
+            a.id AS asset_id,
+            r.politician_id,
+            a.product_id,
+            a.value,
+            pr.name AS product_name,
+            pr.subtype
+        FROM assets a
+        INNER JOIN products pr ON a.product_id = pr.id
+        INNER JOIN reports r ON a.report_id = r.id
+        INNER JOIN politicians p ON r.politician_id = p.id
+        WHERE p.id IN (
+            SELECT DISTINCT r2.politician_id
+            FROM reports r2
+            INNER JOIN assets a2 ON r2.id = a2.report_id
+        )
+        AND a.value IS NOT NULL
+        AND a.value != ''
+        ORDER BY r.politician_id, a.id
     """
 
     close = False
