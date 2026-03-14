@@ -92,7 +92,6 @@ def load_politicians():
     if missing_columns:
         raise AssertionError(f"Missing required columns: {missing_columns}")
 
-    print(f"Loaded {len(df)} active politicians")
     return df
 
 
@@ -138,9 +137,6 @@ def load_assets_with_products():
     ]
     if missing_columns:
         raise AssertionError(f"Missing required columns: {missing_columns}")
-
-    print(f"Loaded {len(df)} enriched assets")
-    print(f"  Columns: {list(df.columns)}")
 
     return df
 
