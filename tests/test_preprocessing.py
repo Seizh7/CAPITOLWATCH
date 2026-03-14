@@ -104,7 +104,9 @@ class TestNormalizeFeaturesRobustness:
             normalize_features(np.array([[1, 2], [3, 4]]), StandardScaler())
 
     def test_fitted_scaler_reusable(self):
-        """Fitted scaler must be reusable to transform new data consistently."""
+        """
+        Fitted scaler must be reusable to transform new data consistently.
+        """
         _, fitted = normalize_features(SAMPLE_DF, StandardScaler())
         new_data = np.array([[20.0, 2.0]])
         transformed = fitted.transform(new_data)
