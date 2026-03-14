@@ -10,6 +10,9 @@ from capitolwatch.analysis.feature_engineering import (
     create_weighted_frequency_vectors,
     compute_numerical_features,
     combine_features,
+    build_politician_documents,
+    create_tfidf_vectors,
+    analyze_sparsity,
 )
 
 
@@ -187,3 +190,134 @@ class TestCombineFeatures:
         numerical_features = compute_numerical_features(freq_matrix)
         combined = combine_features(freq_matrix, numerical_features)
         assert list(combined.index) == list(freq_matrix.index)
+
+
+ASSETS_DF_WITH_PRODUCTS = pd.DataFrame({
+    'politician_id': ['P1', 'P1', 'P1', 'P2', 'P2'],
+    'subtype':       ['Stock', 'Stock', 'ETF', 'Stock', 'ETF'],
+    'value_numeric': [1000.0, 2000.0, 500.0, 3000.0, 100.0],
+    'product_name':  [
+        'Apple Inc.', 'Apple Inc.', 'Vanguard ETF', 'Boeing Co.', None
+    ],
+})
+
+
+class TestBuildPoliticianDocuments:
+
+    def test_returns_one_document_per_politician(self):
+        """Result must contain exactly one string per politician."""
+        docs = build_politician_documents(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS
+        )
+        assert len(docs) == len(POLITICIANS_DF)
+
+    def test_deduplicates_product_names(self):
+        """Each product name must appear only once per document."""
+        docs = build_politician_documents(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS
+        )
+        p1_doc = docs[0]
+        tokens = p1_doc.split()
+        # "Apple" and "Inc." should appear once, not twice
+        assert tokens.count('Apple') == 1
+
+    def test_ignores_null_product_names(self):
+        """NaN product names must not appear in the document."""
+        docs = build_politician_documents(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS
+        )
+        p2_doc = docs[1]
+        assert 'nan' not in p2_doc.lower()
+        assert 'None' not in p2_doc
+
+    def test_all_documents_are_strings(self):
+        """All returned documents must be plain strings."""
+        docs = build_politician_documents(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS
+        )
+        assert all(isinstance(d, str) for d in docs)
+
+    def test_politician_with_no_products_returns_empty_string(self):
+        """A politician with no assets must produce an empty string."""
+        politicians = pd.DataFrame({'id': ['P1', 'P2', 'P3']})
+        docs = build_politician_documents(politicians, ASSETS_DF_WITH_PRODUCTS)
+        assert docs[2] == ''
+
+
+class TestCreateTfidfVectors:
+
+    def test_shape_rows(self):
+        """Number of rows must equal number of politicians."""
+        tfidf_df, _ = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert tfidf_df.shape[0] == len(POLITICIANS_DF)
+
+    def test_shape_columns_bounded_by_max_features(self):
+        """Number of columns must not exceed max_features."""
+        tfidf_df, _ = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert tfidf_df.shape[1] <= 10
+
+    def test_index_name(self):
+        """Index must be named 'politician_id'."""
+        tfidf_df, _ = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert tfidf_df.index.name == 'politician_id'
+
+    def test_index_values_match_politicians(self):
+        """Row index values must match the politicians id column."""
+        tfidf_df, _ = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert list(tfidf_df.index) == list(POLITICIANS_DF['id'])
+
+    def test_values_between_zero_and_one(self):
+        """All TF-IDF values must be in [0, 1]."""
+        tfidf_df, _ = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert (tfidf_df.values >= 0).all()
+        assert (tfidf_df.values <= 1.0 + 1e-9).all()
+
+    def test_no_nan_values(self):
+        """Matrix must not contain any NaN."""
+        tfidf_df, _ = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert not tfidf_df.isnull().any().any()
+
+    def test_returns_vectorizer(self):
+        """Second return value must be a fitted TfidfVectorizer."""
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        _, vectorizer = create_tfidf_vectors(
+            POLITICIANS_DF, ASSETS_DF_WITH_PRODUCTS, max_features=10
+        )
+        assert isinstance(vectorizer, TfidfVectorizer)
+
+
+class TestAnalyzeSparsity:
+
+    def test_fully_sparse_matrix(self, capsys):
+        """A matrix of all zeros must report 100% sparsity."""
+        matrix = pd.DataFrame({'A': [0, 0], 'B': [0, 0]})
+        analyze_sparsity(matrix, name="test")
+        captured = capsys.readouterr()
+        assert "100.0%" in captured.out
+
+    def test_fully_dense_matrix(self, capsys):
+        """A matrix with no zeros must report 0% sparsity."""
+        matrix = pd.DataFrame({'A': [1, 2], 'B': [3, 4]})
+        analyze_sparsity(matrix, name="test")
+        captured = capsys.readouterr()
+        assert "0.0%" in captured.out
+
+    def test_output_contains_shape(self, capsys):
+        """Output must include the matrix shape."""
+        matrix = pd.DataFrame({'A': [1, 0], 'B': [0, 1]})
+        analyze_sparsity(matrix, name="my_matrix")
+        captured = capsys.readouterr()
+        assert "(2, 2)" in captured.out
+        assert "my_matrix" in captured.out
