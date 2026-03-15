@@ -8,6 +8,9 @@ from sklearn.metrics import (
     silhouette_score,
     davies_bouldin_score,
     calinski_harabasz_score,
+    adjusted_rand_score,
+    normalized_mutual_info_score,
+    homogeneity_completeness_v_measure,
 )
 
 
@@ -190,6 +193,172 @@ def export_results(df: pd.DataFrame, output_path: str) -> None:
     """
     # Export df to CSV without the DataFrame index
     df.to_csv(output_path, index=False)
+
+
+def calculate_ari(
+    labels_true: np.ndarray,
+    labels_pred: np.ndarray,
+) -> float:
+    """
+    Compute the Adjusted Rand Index between true and predicted labels.
+
+    The ARI is corrected for chance: 0.0 means random assignment,
+    1.0 means perfect agreement.
+
+    Args:
+        labels_true (np.ndarray): Ground-truth class labels (e.g., party
+            encoded as integers). Shape (n_samples,).
+        labels_pred (np.ndarray): Cluster labels produced by the algorithm.
+            Shape (n_samples,). Label -1 (noise) is excluded before scoring.
+
+    Returns:
+        float: ARI score in [-1, 1], or np.nan if fewer than 2 unique
+            predicted labels remain after filtering.
+    """
+    # Create a boolean mask that keeps only non-outlier points
+    mask = labels_pred != -1
+
+    # Apply the mask to both arrays
+    lt_filtered = labels_true[mask]
+    lp_filtered = labels_pred[mask]
+
+    # Guard — return np.nan if fewer than 2 unique labels in lp_filtered
+    if len(np.unique(lp_filtered)) < 2:
+        return np.nan
+
+    return adjusted_rand_score(lt_filtered, lp_filtered)
+
+
+def calculate_nmi(
+    labels_true: np.ndarray,
+    labels_pred: np.ndarray,
+) -> float:
+    """
+    Compute the Normalized Mutual Information between true and predicted
+    labels.
+
+    Args:
+        labels_true (np.ndarray): Ground-truth labels. Shape (n_samples,).
+        labels_pred (np.ndarray): Cluster labels. Shape (n_samples,).
+            Label -1 (noise) is excluded before scoring.
+
+    Returns:
+        float: NMI score in [0, 1], or np.nan if fewer than 2 unique
+            predicted labels remain after filtering.
+    """
+    # Same mask + guard pattern as calculate_ari
+    mask = labels_pred != -1
+    lt_filtered = labels_true[mask]
+    lp_filtered = labels_pred[mask]
+
+    if len(np.unique(lp_filtered)) < 2:
+        return np.nan
+
+    # average_method="arithmetic" is the sklearn default but explicit is better
+    return normalized_mutual_info_score(
+        lt_filtered, lp_filtered, average_method="arithmetic"
+    )
+
+
+def calculate_v_measure(
+    labels_true: np.ndarray,
+    labels_pred: np.ndarray,
+) -> dict:
+    """
+    Compute homogeneity, completeness, and V-Measure.
+
+    Args:
+        labels_true (np.ndarray): Ground-truth labels. Shape (n_samples,).
+        labels_pred (np.ndarray): Cluster labels. Shape (n_samples,).
+            Label -1 (noise) is excluded before scoring.
+
+    Returns:
+        dict: Keys — homogeneity, completeness, v_measure.
+            Values float in [0, 1], or np.nan if guard triggers.
+    """
+    # Same mask + guard pattern as calculate_ari
+    mask = labels_pred != -1
+    lt_filtered = labels_true[mask]
+    lp_filtered = labels_pred[mask]
+
+    if len(np.unique(lp_filtered)) < 2:
+        return {
+            "homogeneity": np.nan, "completeness": np.nan, "v_measure": np.nan
+        }
+
+    # homogeneity_completeness_v_measure returns a tuple (h, c, v)
+    h, c, v = homogeneity_completeness_v_measure(lt_filtered, lp_filtered)
+    return {"homogeneity": h, "completeness": c, "v_measure": v}
+
+
+def evaluate_clustering_external(
+    labels_true: np.ndarray,
+    labels_pred: np.ndarray,
+    algo_name: str,
+    feature_type: str,
+) -> dict:
+    """
+    Compute all external metrics for one clustering experiment.
+
+    Args:
+        labels_true (np.ndarray): Integer-encoded party labels (R=0,D=1,I=2).
+        labels_pred (np.ndarray): Cluster labels from the algorithm.
+        algo_name (str): Algorithm name (e.g., "kmeans").
+        feature_type (str): Feature set name (e.g., "freq_baseline").
+
+    Returns:
+        dict: Keys — algo_name, feature_type, ari, nmi, homogeneity,
+            completeness, v_measure.
+    """
+    ari = calculate_ari(labels_true, labels_pred)
+    nmi = calculate_nmi(labels_true, labels_pred)
+
+    # Call calculate_v_measure and unpack the result dict into local variables
+    vm = calculate_v_measure(labels_true, labels_pred)
+    # Build and return the result dict with all 7 keys
+    return {
+        "algo_name": algo_name,
+        "feature_type": feature_type,
+        "ari": ari,
+        "nmi": nmi,
+        "homogeneity": vm["homogeneity"],
+        "completeness": vm["completeness"],
+        "v_measure": vm["v_measure"],
+    }
+
+
+def build_confusion_matrix(
+    labels_true: np.ndarray,
+    labels_pred: np.ndarray,
+    party_names: list,
+) -> pd.DataFrame:
+    """
+    Build a cluster x party confusion matrix.
+
+    Noise points (labels_pred == -1) are excluded.
+
+    Args:
+        labels_true (np.ndarray): Integer-encoded party labels.
+        labels_pred (np.ndarray): Cluster labels.
+        party_names (list): Human-readable party names ordered by integer
+            encoding (e.g., ["Republican", "Democratic", "Independent"]).
+
+    Returns:
+        pd.DataFrame: Rows = cluster ids, columns = party names.
+    """
+    # Apply mask to remove outliers from both arrays
+    mask = labels_pred != -1
+    labels_true_filtered = labels_true[mask]
+    labels_pred_filtered = labels_pred[mask]
+
+    # pd.crosstab counts co-occurrences between two arrays
+    matrix = pd.crosstab(labels_pred_filtered, labels_true_filtered)
+
+    # Map each integer code that actually appears to its party name
+    party_map = {i: name for i, name in enumerate(party_names)}
+    matrix.columns = [party_map[col] for col in matrix.columns]
+
+    return matrix
 
 
 if __name__ == "__main__":

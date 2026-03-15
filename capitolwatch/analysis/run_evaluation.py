@@ -28,7 +28,9 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from capitolwatch.analysis.evaluation import (
     build_comparison_table,
+    build_confusion_matrix,
     evaluate_clustering,
+    evaluate_clustering_external,
     export_results,
 )
 from capitolwatch.analysis.feature_store import load_features
@@ -324,7 +326,133 @@ def print_comparison_table(df: pd.DataFrame) -> None:
     print(display.to_string(index=False))
 
 
+def _load_party_labels() -> np.ndarray:
+    """
+    Load politician_labels from the feature store and encode party as integers.
+
+    Encoding: Republican=0, Democratic=1, Independent=2.
+
+    Returns:
+        np.ndarray: Integer array of shape (n_politicians,).
+    """
+    labels_df = load_features("politician_labels")
+    party_map = {"Republican": 0, "Democratic": 1, "Independent": 2}
+    # map returns NaN for unknown values — fill with -1 as a safe fallback
+    encoded = labels_df["party"].map(party_map).fillna(-1).astype(int)
+    return encoded.to_numpy()
+
+
+def run_external_evaluations(
+    output_path: str = "data/visualizations/evaluation_results_external.csv",
+    confusion_matrix_dir: str = "data/visualizations",
+) -> pd.DataFrame:
+    """
+    Run external metrics (ARI, NMI, V-Measure) for all 6 experiments.
+
+    Uses party affiliation as ground-truth labels. Also saves one
+    confusion-matrix heatmap per experiment as a PNG.
+
+    Args:
+        output_path (str): Path for the exported CSV file.
+        confusion_matrix_dir (str): Directory where heatmap PNGs are saved.
+
+    Returns:
+        pd.DataFrame: Sorted comparison table (best ARI first).
+    """
+    import os
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    os.makedirs(confusion_matrix_dir, exist_ok=True)
+
+    configs = _build_experiment_configs()
+    party_names = ["Republican", "Democratic", "Independent"]
+    labels_true = _load_party_labels()
+    results = []
+
+    for cfg in configs:
+        algo = cfg["algo"]
+        feature_type = cfg["feature_type"]
+        print(f"  External {algo} / {feature_type} ...", end=" ", flush=True)
+
+        _, labels_pred = cfg["loader"]()
+        result = evaluate_clustering_external(
+            labels_true, labels_pred, algo, feature_type
+        )
+        results.append(result)
+
+        ari = result["ari"]
+        ari_str = f"{ari:.4f}" if not np.isnan(float(ari)) else "nan"
+        print(
+            f"ARI={ari_str} | NMI={result['nmi']:.4f} | "
+            f"V={result['v_measure']:.4f}"
+        )
+
+        # Build and save the confusion matrix heatmap
+        matrix = build_confusion_matrix(labels_true, labels_pred, party_names)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        sns.heatmap(
+            matrix,
+            annot=True,
+            fmt="d",
+            cmap="Blues",
+            ax=ax,
+            linewidths=0.5,
+        )
+        ax.set_title(f"Clusters vs Parties — {algo} / {feature_type}")
+        ax.set_xlabel("Party")
+        ax.set_ylabel("Cluster")
+        fig.tight_layout()
+
+        png_path = os.path.join(
+            confusion_matrix_dir,
+            f"confusion_{algo}_{feature_type}.png",
+        )
+        fig.savefig(png_path, dpi=150)
+        plt.close(fig)
+        print(f"    Saved: {png_path}")
+
+    df = pd.DataFrame(results).sort_values(
+        by="ari", ascending=False
+    ).reset_index(drop=True)
+
+    df.to_csv(output_path, index=False)
+    print(f"\nExternal results exported to: {output_path}")
+    return df
+
+
+def print_external_comparison_table(df: pd.DataFrame) -> None:
+    """
+    Print the external metrics comparison table with aligned columns.
+
+    Args:
+        df (pd.DataFrame): Output of run_external_evaluations().
+    """
+    print("\n=== External Metrics — All Experiments ===\n")
+    col_fmt = {
+        "algo_name": "Algorithm",
+        "feature_type": "Feature type",
+        "ari": "ARI",
+        "nmi": "NMI",
+        "homogeneity": "Homogeneity",
+        "completeness": "Completeness",
+        "v_measure": "V-Measure",
+    }
+    display = df.rename(columns=col_fmt)
+    for col in ["ARI", "NMI", "Homogeneity", "Completeness", "V-Measure"]:
+        display[col] = display[col].apply(
+            lambda v: f"{v:.4f}" if not pd.isna(v) else "nan"
+        )
+    print(display.to_string(index=False))
+
+
 if __name__ == "__main__":
     print("Running internal metric evaluation on all 6 experiments\n")
-    df = run_all_evaluations()
-    print_comparison_table(df)
+    df_internal = run_all_evaluations()
+    print_comparison_table(df_internal)
+
+    print("\nRunning external metric evaluation on all 6 experiments\n")
+    df_external = run_external_evaluations()
+    print_external_comparison_table(df_external)
