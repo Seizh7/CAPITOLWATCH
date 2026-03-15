@@ -25,11 +25,6 @@ def _load_and_normalize(feature_type: str) -> tuple:
     """
     Load a feature matrix from the store and apply StandardScaler.
 
-    DBSCAN relies on a distance metric (eps is a distance threshold),
-    so StandardScaler is the appropriate normalizer here: it centers
-    each feature at 0 with unit variance, making distances comparable
-    across dimensions.
-
     Args:
         feature_type (str): One of "freq_baseline" or "freq_weighted".
 
