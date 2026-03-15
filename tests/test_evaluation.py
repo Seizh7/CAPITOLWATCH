@@ -11,10 +11,15 @@ from sklearn.datasets import make_blobs
 
 from capitolwatch.analysis.evaluation import (
     build_comparison_table,
+    build_confusion_matrix,
+    calculate_ari,
     calculate_calinski_harabasz_index,
     calculate_davies_bouldin_index,
+    calculate_nmi,
     calculate_silhouette_score,
+    calculate_v_measure,
     evaluate_clustering,
+    evaluate_clustering_external,
     export_results,
 )
 
@@ -399,3 +404,264 @@ class TestExportResults:
             export_results(df, path)
             loaded = pd.read_csv(path)
             assert "Unnamed: 0" not in loaded.columns
+
+
+def make_party_labels(n: int = 79) -> np.ndarray:
+    """
+    Generate synthetic party labels (0=R, 1=D, 2=I) matching dataset size.
+
+    Returns:
+        np.ndarray: Integer array of shape (n,).
+    """
+    # ~55% R, ~43% D, ~2% I — approximate real distribution
+    rng = np.random.default_rng(0)
+    labels = rng.choice([0, 1, 2], size=n, p=[0.55, 0.43, 0.02])
+    return labels.astype(int)
+
+
+class TestCalculateAri:
+
+    def test_perfect_agreement_returns_one(self):
+        """When pred == true, ARI must be 1.0."""
+        labels = np.array([0, 0, 1, 1, 2, 2])
+        score = calculate_ari(labels, labels.copy())
+        assert abs(score - 1.0) < 1e-9
+
+    def test_random_labels_near_zero(self):
+        """Two independent random labelings should give ARI near 0."""
+        rng = np.random.default_rng(42)
+        lt = rng.integers(0, 3, size=200)
+        lp = rng.integers(0, 3, size=200)
+        score = calculate_ari(lt, lp)
+        assert -0.1 < score < 0.2
+
+    def test_returns_float(self):
+        """ARI must be a float."""
+        lt = np.array([0, 0, 1, 1])
+        lp = np.array([0, 0, 1, 1])
+        assert isinstance(calculate_ari(lt, lp), float)
+
+    def test_outliers_excluded(self):
+        """ARI computed with outliers must equal ARI on filtered data."""
+        lt = np.array([0, 1, 0, 1, 0, 1])
+        lp = np.array([0, 1, 0, -1, 0, -1])
+        mask = lp != -1
+        expected = calculate_ari(lt[mask], lp[mask])
+        assert abs(calculate_ari(lt, lp) - expected) < 1e-9
+
+    def test_all_outliers_returns_nan(self):
+        """All pred == -1 → np.nan."""
+        lt = np.array([0, 1, 0])
+        lp = np.full(3, -1)
+        assert np.isnan(calculate_ari(lt, lp))
+
+    def test_single_cluster_after_filter_returns_nan(self):
+        """Only one unique pred label after filtering → np.nan."""
+        lt = np.array([0, 1, 0, 1])
+        lp = np.array([0, 0, 0, -1])
+        assert np.isnan(calculate_ari(lt, lp))
+
+    def test_range_is_valid(self):
+        """Score must lie in [-1, 1] for any valid input."""
+        lt = make_party_labels()
+        lp = np.random.default_rng(7).integers(0, 3, size=79)
+        score = calculate_ari(lt, lp)
+        assert -1.0 <= score <= 1.0
+
+
+class TestCalculateNmi:
+
+    def test_perfect_agreement_returns_one(self):
+        """When pred == true, NMI must be 1.0."""
+        labels = np.array([0, 0, 1, 1, 2, 2])
+        score = calculate_nmi(labels, labels.copy())
+        assert abs(score - 1.0) < 1e-9
+
+    def test_returns_non_negative_float(self):
+        """NMI must be >= 0."""
+        lt = make_party_labels()
+        lp = np.random.default_rng(3).integers(0, 3, size=79)
+        score = calculate_nmi(lt, lp)
+        assert isinstance(score, float)
+        assert score >= 0.0
+
+    def test_outliers_excluded(self):
+        """NMI with outliers must equal NMI on filtered data."""
+        lt = np.array([0, 1, 0, 1, 0, 1])
+        lp = np.array([0, 1, 0, -1, 0, -1])
+        mask = lp != -1
+        expected = calculate_nmi(lt[mask], lp[mask])
+        assert abs(calculate_nmi(lt, lp) - expected) < 1e-9
+
+    def test_all_outliers_returns_nan(self):
+        """All pred == -1 → np.nan."""
+        lt = np.array([0, 1, 0])
+        lp = np.full(3, -1)
+        assert np.isnan(calculate_nmi(lt, lp))
+
+    def test_range_is_valid(self):
+        """NMI must lie in [0, 1]."""
+        lt = make_party_labels()
+        lp = np.random.default_rng(9).integers(0, 3, size=79)
+        score = calculate_nmi(lt, lp)
+        assert 0.0 <= score <= 1.0
+
+
+class TestCalculateVMeasure:
+
+    def test_returns_dict_with_three_keys(self):
+        # calculate_v_measure must return homogeneity, completeness, v_measure.
+        labels = np.array([0, 0, 1, 1])
+        result = calculate_v_measure(labels, labels.copy())
+        assert set(result.keys()) == {
+            "homogeneity", "completeness", "v_measure"
+        }
+
+    def test_perfect_agreement_all_ones(self):
+        """All three values must be 1.0 when pred == true."""
+        labels = np.array([0, 0, 1, 1, 2, 2])
+        result = calculate_v_measure(labels, labels.copy())
+        assert abs(result["homogeneity"] - 1.0) < 1e-9
+        assert abs(result["completeness"] - 1.0) < 1e-9
+        assert abs(result["v_measure"] - 1.0) < 1e-9
+
+    def test_all_outliers_returns_nan_dict(self):
+        """All pred == -1 → all three values must be np.nan."""
+        lt = np.array([0, 1, 0])
+        lp = np.full(3, -1)
+        result = calculate_v_measure(lt, lp)
+        assert np.isnan(result["homogeneity"])
+        assert np.isnan(result["completeness"])
+        assert np.isnan(result["v_measure"])
+
+    def test_outliers_excluded(self):
+        """Result with outliers must match result on filtered data."""
+        lt = np.array([0, 1, 0, 1, 0, 1])
+        lp = np.array([0, 1, 0, -1, 0, -1])
+        mask = lp != -1
+        expected = calculate_v_measure(lt[mask], lp[mask])
+        result = calculate_v_measure(lt, lp)
+        assert abs(result["v_measure"] - expected["v_measure"]) < 1e-9
+
+    def test_values_in_range(self):
+        """All three values must be in [0, 1]."""
+        lt = make_party_labels()
+        lp = np.random.default_rng(5).integers(0, 3, size=79)
+        result = calculate_v_measure(lt, lp)
+        for key in ("homogeneity", "completeness", "v_measure"):
+            assert 0.0 <= result[key] <= 1.0
+
+
+class TestEvaluateClusteringExternal:
+
+    def _make_inputs(self) -> tuple:
+        lt = make_party_labels(79)
+        rng = np.random.default_rng(1)
+        lp = rng.integers(0, 3, size=79)
+        return lt, lp
+
+    def test_returns_dict_with_required_keys(self):
+        """evaluate_clustering_external must return all 7 expected keys."""
+        lt, lp = self._make_inputs()
+        result = evaluate_clustering_external(
+            lt, lp, "kmeans", "freq_baseline"
+        )
+        expected_keys = {
+            "algo_name",
+            "feature_type",
+            "ari",
+            "nmi",
+            "homogeneity",
+            "completeness",
+            "v_measure",
+        }
+        assert set(result.keys()) == expected_keys
+
+    def test_metadata_stored_correctly(self):
+        """algo_name and feature_type are stored as provided."""
+        lt, lp = self._make_inputs()
+        result = evaluate_clustering_external(
+            lt, lp, "dbscan", "freq_weighted"
+        )
+        assert result["algo_name"] == "dbscan"
+        assert result["feature_type"] == "freq_weighted"
+
+    def test_scores_are_floats(self):
+        """All 5 metric values must be floats."""
+        lt, lp = self._make_inputs()
+        result = evaluate_clustering_external(lt, lp, "som", "freq_baseline")
+        for key in ("ari", "nmi", "homogeneity", "completeness", "v_measure"):
+            assert isinstance(result[key], float), f"{key} is not float"
+
+    def test_all_outliers_produces_nan_metrics(self):
+        """All pred == -1 → all five metrics must be nan."""
+        lt = make_party_labels(79)
+        lp = np.full(79, -1, dtype=int)
+        result = evaluate_clustering_external(
+            lt, lp, "dbscan", "freq_baseline"
+        )
+        for key in ("ari", "nmi", "homogeneity", "completeness", "v_measure"):
+            assert np.isnan(result[key]), f"{key} should be nan"
+
+    def test_perfect_clustering_returns_one(self):
+        """When pred == true, all metrics must return 1.0."""
+        labels = np.array([0] * 40 + [1] * 30 + [2] * 9)
+        result = evaluate_clustering_external(
+            labels, labels.copy(), "kmeans", "freq_baseline"
+        )
+        assert abs(result["ari"] - 1.0) < 1e-9
+        assert abs(result["nmi"] - 1.0) < 1e-9
+        assert abs(result["v_measure"] - 1.0) < 1e-9
+
+
+class TestBuildConfusionMatrix:
+
+    def _make_inputs(self) -> tuple:
+        """Return (labels_true, labels_pred, party_names)."""
+        lt = np.array([0, 0, 1, 1, 0, 1, 2])
+        lp = np.array([0, 0, 1, 1, 1, 0, 2])
+        names = ["Republican", "Democratic", "Independent"]
+        return lt, lp, names
+
+    def test_returns_dataframe(self):
+        """build_confusion_matrix must return a DataFrame."""
+        lt, lp, names = self._make_inputs()
+        matrix = build_confusion_matrix(lt, lp, names)
+        assert isinstance(matrix, pd.DataFrame)
+
+    def test_columns_are_party_names(self):
+        """Column names must be human-readable party names."""
+        lt, lp, names = self._make_inputs()
+        matrix = build_confusion_matrix(lt, lp, names)
+        for col in matrix.columns:
+            assert col in names
+
+    def test_outliers_excluded_from_matrix(self):
+        """Points with labels_pred == -1 must not appear in the matrix."""
+        lt = np.array([0, 1, 0, 1, 0])
+        lp = np.array([0, 1, -1, 0, 1])
+        names = ["Republican", "Democratic", "Independent"]
+        matrix = build_confusion_matrix(lt, lp, names)
+        # total count in matrix must equal number of non-outlier points
+        assert matrix.values.sum() == (lp != -1).sum()
+
+    def test_counts_are_correct(self):
+        """Cell values must match manual counts."""
+        lt = np.array([0, 0, 1, 1])
+        lp = np.array([0, 0, 1, 1])
+        names = ["Republican", "Democratic", "Independent"]
+        matrix = build_confusion_matrix(lt, lp, names)
+        assert matrix.loc[0, "Republican"] == 2
+        assert matrix.loc[1, "Democratic"] == 2
+
+    def test_missing_party_does_not_crash(self):
+        # If a party is absent from the filtered data, no crash should occur.
+        # No Independent (2) in the data after filtering
+        lt = np.array([0, 0, 1, 1])
+        lp = np.array([0, 1, 0, 1])
+        names = ["Republican", "Democratic", "Independent"]
+        matrix = build_confusion_matrix(lt, lp, names)
+        # Independent column must be absent — only present parties are columns
+        assert "Independent" not in matrix.columns
+        assert "Republican" in matrix.columns
+        assert "Democratic" in matrix.columns
