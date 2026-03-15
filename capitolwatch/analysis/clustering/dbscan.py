@@ -6,9 +6,9 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.cluster import DBSCAN  # noqa: F401
-from sklearn.decomposition import PCA  # noqa: F401
-from sklearn.metrics import silhouette_score  # noqa: F401
+from sklearn.cluster import DBSCAN
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 
 from capitolwatch.analysis.clustering.base import BaseClusterer
 
@@ -16,10 +16,6 @@ from capitolwatch.analysis.clustering.base import BaseClusterer
 class DBSCANClusterer(BaseClusterer):
     """
     DBSCAN clustering class around sklearn.cluster.DBSCAN.
-
-    DBSCAN is a density-based algorithm: it finds clusters as regions of
-    high density separated by low-density regions. Points that do not
-    belong to any dense region are labeled as -1 (noise / outliers).
 
     Attributes:
         eps (float): Maximum distance between two samples for one to be
