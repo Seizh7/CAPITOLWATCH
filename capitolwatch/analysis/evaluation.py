@@ -1,0 +1,224 @@
+# Copyright (c) 2026 Seizh7
+# Licensed under the Apache License, Version 2.0
+# (http://www.apache.org/licenses/LICENSE-2.0)
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import (
+    silhouette_score,
+    davies_bouldin_score,
+    calinski_harabasz_score,
+)
+
+
+def calculate_silhouette_score(
+    X: np.ndarray,
+    labels: np.ndarray,
+) -> float:
+    """
+    Compute the mean Silhouette Coefficient for a clustering result.
+
+    Args:
+        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+        labels (np.ndarray): Cluster labels of shape (n_samples,).
+            Label -1 is treated as noise and excluded.
+
+    Returns:
+        float: Mean silhouette score in [-1, 1], or np.nan if fewer than
+            2 valid clusters remain after filtering.
+    """
+    # Filter out outliers (label == -1) using a boolean mask
+    mask = labels != -1
+    X_filtered = X[mask]
+    labels_filtered = labels[mask]
+
+    # Guard — return np.nan if fewer than 2 distinct clusters remain
+    if len(np.unique(labels_filtered)) < 2:
+        return np.nan
+
+    # Call sklearn silhouette_score and return the result
+    return silhouette_score(X_filtered, labels_filtered)
+
+
+def calculate_davies_bouldin_index(
+    X: np.ndarray,
+    labels: np.ndarray,
+) -> float:
+    """
+    Compute the Davies-Bouldin Index for a clustering result.
+
+    Lower is better (0 = perfect separation). Outlier points (label == -1)
+    are excluded before computation.
+
+    Args:
+        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+        labels (np.ndarray): Cluster labels of shape (n_samples,).
+            Label -1 is treated as noise and excluded.
+
+    Returns:
+        float: Davies-Bouldin index >= 0, or np.nan if fewer than
+            2 valid clusters remain after filtering.
+    """
+    # Filter out outliers using the same mask pattern as above
+    mask = labels != -1
+    X_filtered = X[mask]
+    labels_filtered = labels[mask]
+
+    # Guard — return np.nan if fewer than 2 distinct clusters remain
+    if len(np.unique(labels_filtered)) < 2:
+        return np.nan
+
+    # Call sklearn davies_bouldin_score and return the result
+    return davies_bouldin_score(X_filtered, labels_filtered)
+
+
+def calculate_calinski_harabasz_index(
+    X: np.ndarray,
+    labels: np.ndarray,
+) -> float:
+    """
+    Compute the Calinski-Harabasz Index for a clustering result.
+
+    Higher is better (no upper bound). Outlier points (label == -1)
+    are excluded before computation.
+
+    Args:
+        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+        labels (np.ndarray): Cluster labels of shape (n_samples,).
+            Label -1 is treated as noise and excluded.
+
+    Returns:
+        float: Calinski-Harabasz index > 0, or np.nan if fewer than
+            2 valid clusters remain after filtering.
+    """
+    # Filter out outliers
+    mask = labels != -1
+    X_filtered = X[mask]
+    labels_filtered = labels[mask]
+
+    # Guard — return np.nan if fewer than 2 distinct clusters remain
+    if len(np.unique(labels_filtered)) < 2:
+        return np.nan
+
+    # Call sklearn calinski_harabasz_score and return the result
+    return calinski_harabasz_score(X_filtered, labels_filtered)
+
+
+def evaluate_clustering(
+    X: np.ndarray,
+    labels: np.ndarray,
+    algo_name: str,
+    feature_type: str,
+) -> dict:
+    """
+    Compute all three internal metrics for one clustering experiment.
+
+    Outliers (label == -1, produced by DBSCAN) are excluded from metric
+    calculations but their count is reported in the result dict so that
+    the caller can assess the coverage of the clustering.
+
+    Args:
+        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+        labels (np.ndarray): Cluster labels of shape (n_samples,).
+        algo_name (str): Name of the algorithm (e.g., "kmeans", "dbscan",
+            "som").
+        feature_type (str): Name of the feature set used (e.g.,
+            "freq_baseline", "freq_weighted").
+
+    Returns:
+        dict: Keys — algo_name, feature_type, n_clusters, n_outliers,
+            silhouette, davies_bouldin, calinski_harabasz.
+    """
+    # Count the number of outliers (labels == -1)
+    n_outliers = int(np.sum(labels == -1))
+
+    # Count valid clusters (unique labels excluding -1)
+    n_clusters = int(len(np.unique(labels[labels != -1])))
+
+    # Call the three metric functions defined above
+    silhouette = calculate_silhouette_score(X, labels)
+    davies_bouldin = calculate_davies_bouldin_index(X, labels)
+    calinski_harabasz = calculate_calinski_harabasz_index(X, labels)
+
+    return {
+        "algo_name": algo_name,
+        "feature_type": feature_type,
+        "n_clusters": n_clusters,
+        "n_outliers": n_outliers,
+        "silhouette": silhouette,
+        "davies_bouldin": davies_bouldin,
+        "calinski_harabasz": calinski_harabasz,
+    }
+
+
+def build_comparison_table(results: list) -> pd.DataFrame:
+    """
+    Assemble a list of evaluation dicts into a sorted comparison DataFrame.
+
+    The table is sorted by silhouette score (descending) so the best
+    experiment appears first.
+
+    Args:
+        results (list): List of dicts as returned by evaluate_clustering().
+
+    Returns:
+        pd.DataFrame: One row per experiment, columns matching the keys
+            of the input dicts.
+    """
+    # Create a DataFrame from the list of dicts
+    df = pd.DataFrame(results)
+
+    # Sort by silhouette descending, reset the index
+    df = df.sort_values(
+        by="silhouette", ascending=False
+    ).reset_index(drop=True)
+
+    return df
+
+
+def export_results(df: pd.DataFrame, output_path: str) -> None:
+    """
+    Save the comparison DataFrame to a CSV file.
+
+    Args:
+        df (pd.DataFrame): Comparison table as returned by
+            build_comparison_table().
+        output_path (str): Absolute or relative path for the CSV file.
+
+    Returns:
+        None
+    """
+    # Export df to CSV without the DataFrame index
+    df.to_csv(output_path, index=False)
+
+
+if __name__ == "__main__":
+    from sklearn.datasets import make_blobs
+    from sklearn.cluster import KMeans, DBSCAN
+
+    # Generate synthetic data
+    X, _ = make_blobs(
+        n_samples=300, centers=4, cluster_std=0.60, random_state=0
+    )
+
+    # Run KMeans
+    kmeans_labels = KMeans(n_clusters=4).fit_predict(X)
+    kmeans_results = evaluate_clustering(
+        X, kmeans_labels, "kmeans", "synthetic"
+    )
+
+    # Run DBSCAN
+    dbscan_labels = DBSCAN(eps=0.5, min_samples=5).fit_predict(X)
+    dbscan_results = evaluate_clustering(
+        X, dbscan_labels, "dbscan", "synthetic"
+    )
+
+    # Run SOM (placeholder - replace with actual SOM implementation)
+    som_labels = np.random.randint(0, 4, size=X.shape[0])
+    som_results = evaluate_clustering(X, som_labels, "som", "synthetic")
+
+    # Build comparison table
+    comparison_df = build_comparison_table([
+        kmeans_results, dbscan_results, som_results
+    ])
+    print(comparison_df)
