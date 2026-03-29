@@ -1,0 +1,24 @@
+# Datapipeline dependencies — scraping, enrichment, and database management.
+# NOT used by Docker. Install locally before running the datapipeline:
+#
+#   pip install -r requirements.txt
+#   pip install -r requirements-pipeline.txt
+
+# Inherit the runtime dependencies
+-r requirements.txt
+
+# Scraping
+beautifulsoup4==4.13.4
+selenium==4.34.2
+
+# CLI
+typer==0.21.1
+
+# Data enrichment (financial APIs)
+requests==2.32.5
+yfinance==0.2.65
+boto3==1.40.24
+
+# Optional: improves politician name matching accuracy.
+# The code falls back to basic string similarity if this package is absent.
+git+https://github.com/Seizh7/NAMEMATCHING.git
