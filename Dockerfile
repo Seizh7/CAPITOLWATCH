@@ -11,10 +11,6 @@ COPY requirements.txt .
 
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --prefix=/install -r requirements.txt && \
-    find /install -type d -name "tests" -exec rm -rf {} + 2>/dev/null; \
-    find /install -type d -name "test" -exec rm -rf {} + 2>/dev/null; \
-    find /install -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null; \
-    find /install -name "*.pyc" -delete 2>/dev/null; \
     true
 
 # Stage 2: runtime image
@@ -33,9 +29,9 @@ RUN adduser --disabled-password --gecos "" appuser
 
 # Copy only the source code needed at runtime.
 # data/ is provided via a Docker volume.
-COPY capitolwatch/ ./capitolwatch/
-COPY config/ ./config/
-COPY pytest.ini .
+COPY --chown=appuser:appuser capitolwatch/ ./capitolwatch/
+COPY --chown=appuser:appuser config/ ./config/
+COPY --chown=appuser:appuser pytest.ini .
 
 # Switch to the non-root user before starting the process.
 USER appuser

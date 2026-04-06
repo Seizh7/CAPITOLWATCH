@@ -16,5 +16,10 @@ data/*
 !data/visualizations/
 
 .env
-.github
+.github/copilot-instructions.md
 .docs
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/

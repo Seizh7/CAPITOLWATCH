@@ -1,0 +1,70 @@
+# Copyright (c) 2026 Seizh7
+# Licensed under the Apache License, Version 2.0
+# (http://www.apache.org/licenses/LICENSE-2.0)
+#
+# CI pipeline — runs on every push and pull request targeting main.
+# Steps:
+#   1. Checkout code
+#   2. Set up Python 3.9
+#   3. Install dependencies
+#   4. Run tests with coverage
+#   5. Build Docker image
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Tests & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit and integration tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=capitolwatch \
+            --cov-config=.coveragerc \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=70 \
+            -v
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    # Only build Docker after tests pass, and only on main
+    needs: test
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker compose build

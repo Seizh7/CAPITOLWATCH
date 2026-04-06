@@ -1,8 +1,8 @@
 # CAPITOLWATCH
 
-## Quick start — Docker
+[![CI](https://github.com/Seizh7/CAPITOLWATCH/actions/workflows/ci.yml/badge.svg)](https://github.com/Seizh7/CAPITOLWATCH/actions/workflows/ci.yml)
 
-**Prerequisites:** Docker Desktop installed and running.
+## Quick start — Docker
 
 ```bash
 # Build the image
@@ -15,4 +15,4 @@ docker compose up
 docker compose down
 ```
 
-The dashboard is available at http://localhost:8501.
+Dashboard available at http://localhost:8501.
