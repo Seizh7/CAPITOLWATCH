@@ -18,6 +18,7 @@ data/*
 .env
 .github/copilot-instructions.md
 .docs
+.vscode
 
 # Coverage reports
 .coverage
