@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     silhouette_score,
-    davies_bouldin_score,
-    calinski_harabasz_score,
     adjusted_rand_score,
     normalized_mutual_info_score,
     homogeneity_completeness_v_measure,
@@ -43,70 +41,6 @@ def calculate_silhouette_score(
     return silhouette_score(X_filtered, labels_filtered)
 
 
-def calculate_davies_bouldin_index(
-    X: np.ndarray,
-    labels: np.ndarray,
-) -> float:
-    """
-    Compute the Davies-Bouldin Index for a clustering result.
-
-    Lower is better (0 = perfect separation). Outlier points (label == -1)
-    are excluded before computation.
-
-    Args:
-        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
-        labels (np.ndarray): Cluster labels of shape (n_samples,).
-            Label -1 is treated as noise and excluded.
-
-    Returns:
-        float: Davies-Bouldin index >= 0, or np.nan if fewer than
-            2 valid clusters remain after filtering.
-    """
-    # Filter out outliers using the same mask pattern as above
-    mask = labels != -1
-    X_filtered = X[mask]
-    labels_filtered = labels[mask]
-
-    # Guard — return np.nan if fewer than 2 distinct clusters remain
-    if len(np.unique(labels_filtered)) < 2:
-        return np.nan
-
-    # Call sklearn davies_bouldin_score and return the result
-    return davies_bouldin_score(X_filtered, labels_filtered)
-
-
-def calculate_calinski_harabasz_index(
-    X: np.ndarray,
-    labels: np.ndarray,
-) -> float:
-    """
-    Compute the Calinski-Harabasz Index for a clustering result.
-
-    Higher is better (no upper bound). Outlier points (label == -1)
-    are excluded before computation.
-
-    Args:
-        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
-        labels (np.ndarray): Cluster labels of shape (n_samples,).
-            Label -1 is treated as noise and excluded.
-
-    Returns:
-        float: Calinski-Harabasz index > 0, or np.nan if fewer than
-            2 valid clusters remain after filtering.
-    """
-    # Filter out outliers
-    mask = labels != -1
-    X_filtered = X[mask]
-    labels_filtered = labels[mask]
-
-    # Guard — return np.nan if fewer than 2 distinct clusters remain
-    if len(np.unique(labels_filtered)) < 2:
-        return np.nan
-
-    # Call sklearn calinski_harabasz_score and return the result
-    return calinski_harabasz_score(X_filtered, labels_filtered)
-
-
 def evaluate_clustering(
     X: np.ndarray,
     labels: np.ndarray,
@@ -114,7 +48,7 @@ def evaluate_clustering(
     feature_type: str,
 ) -> dict:
     """
-    Compute all three internal metrics for one clustering experiment.
+    Compute the Silhouette score for one clustering experiment.
 
     Outliers (label == -1, produced by DBSCAN) are excluded from metric
     calculations but their count is reported in the result dict so that
@@ -130,7 +64,7 @@ def evaluate_clustering(
 
     Returns:
         dict: Keys — algo_name, feature_type, n_clusters, n_outliers,
-            silhouette, davies_bouldin, calinski_harabasz.
+            silhouette.
     """
     # Count the number of outliers (labels == -1)
     n_outliers = int(np.sum(labels == -1))
@@ -138,10 +72,8 @@ def evaluate_clustering(
     # Count valid clusters (unique labels excluding -1)
     n_clusters = int(len(np.unique(labels[labels != -1])))
 
-    # Call the three metric functions defined above
+    # Calculate silhouette score using the function defined above
     silhouette = calculate_silhouette_score(X, labels)
-    davies_bouldin = calculate_davies_bouldin_index(X, labels)
-    calinski_harabasz = calculate_calinski_harabasz_index(X, labels)
 
     return {
         "algo_name": algo_name,
@@ -149,8 +81,6 @@ def evaluate_clustering(
         "n_clusters": n_clusters,
         "n_outliers": n_outliers,
         "silhouette": silhouette,
-        "davies_bouldin": davies_bouldin,
-        "calinski_harabasz": calinski_harabasz,
     }
 
 

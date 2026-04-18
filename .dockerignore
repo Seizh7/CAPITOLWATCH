@@ -1,0 +1,36 @@
+# Python
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Data — provided at runtime via Docker volumes
+data/
+
+# Development tooling and IDE config
+.idea/
+.vscode/
+.DS_Store
+**/.DS_Store
+
+# Git and CI
+.git/
+.github/
+.gitignore
+
+# Secrets — must never enter the image
+.env
+.env.*
+
+# Documentation and project management files
+.docs/
+README.md
+LICENCE
+
+# Tests (not executed inside the container)
+tests/
+
+# Temporary / local outputs
+*.log

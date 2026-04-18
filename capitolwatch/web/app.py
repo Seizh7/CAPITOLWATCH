@@ -49,8 +49,6 @@ _EXTERNAL_CSV = (
 # Internal metrics column names as used in the CSV
 _INTERNAL_METRICS: list[str] = [
     "silhouette",
-    "davies_bouldin",
-    "calinski_harabasz",
 ]
 
 
@@ -231,15 +229,11 @@ def _tab_comparison(internal_df: pd.DataFrame) -> None:
         "n_clusters",
         "n_outliers",
         "silhouette",
-        "davies_bouldin",
-        "calinski_harabasz",
     ]
     st.dataframe(
         internal_df[display_cols].style.format(
             {
                 "silhouette": "{:.4f}",
-                "davies_bouldin": "{:.4f}",
-                "calinski_harabasz": "{:.2f}",
             }
         ),
         use_container_width=True,

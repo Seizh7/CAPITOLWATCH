@@ -2,8 +2,25 @@
 .DS_Store
 **/.DS_Store
 .idea
+
+# Ignore all data by default
 data/*
+
+# Keep the gitkeep marker
 !data/.gitkeep
+
+# Pre-computed datas required to run the application without the datapipeline
+!data/capitolwatch.db
+!data/manual_overrides.json
+!data/feature_store/
+!data/visualizations/
+
 .env
-.github
+.github/copilot-instructions.md
 .docs
+.vscode
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
