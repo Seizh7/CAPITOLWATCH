@@ -10,7 +10,9 @@ from typing import Optional, Tuple, Dict
 
 from bs4 import BeautifulSoup
 
-from capitolwatch.services.politician_matcher import match_politician
+from capitolwatch.datapipeline.database.politician_matcher import (
+    match_politician
+)
 from capitolwatch.services.reports import update_report_fields
 from capitolwatch.services.politicians import get_politician_basic_info
 from capitolwatch.db import get_connection

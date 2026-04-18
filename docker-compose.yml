@@ -1,0 +1,21 @@
+# Copyright (c) 2026 Seizh7
+# Licensed under the Apache License, Version 2.0
+# (http://www.apache.org/licenses/LICENSE-2.0)
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: capitolwatch:latest
+    container_name: capitolwatch-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount only the files the Streamlit dashboard actually reads at runtime
+      - ./data/capitolwatch.db:/app/data/capitolwatch.db:ro
+      - ./data/feature_store:/app/data/feature_store:ro
+      - ./data/visualizations:/app/data/visualizations:ro
+    environment:
+      APP_ENV: production
+    restart: unless-stopped
