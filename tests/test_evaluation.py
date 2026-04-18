@@ -13,8 +13,6 @@ from capitolwatch.analysis.evaluation import (
     build_comparison_table,
     build_confusion_matrix,
     calculate_ari,
-    calculate_calinski_harabasz_index,
-    calculate_davies_bouldin_index,
     calculate_nmi,
     calculate_silhouette_score,
     calculate_v_measure,
@@ -114,86 +112,10 @@ class TestCalculateSilhouetteScore:
         assert abs(calculate_silhouette_score(X, labels) - expected) < 1e-9
 
 
-class TestCalculateDaviesBouldinIndex:
-
-    def test_valid_clusters_returns_non_negative_float(self):
-        """DBI must be >= 0 for valid clustering."""
-        X, labels = make_clean_blobs(n_clusters=3)
-        score = calculate_davies_bouldin_index(X, labels)
-        assert isinstance(score, float)
-        assert score >= 0.0
-
-    def test_well_separated_clusters_low_score(self):
-        """Tight, well-separated blobs should produce DBI < 0.5."""
-        X, labels = make_clean_blobs(n_clusters=3)
-        score = calculate_davies_bouldin_index(X, labels)
-        assert score < 0.5
-
-    def test_outliers_excluded(self):
-        """DBI with outliers must equal DBI on filtered data."""
-        X, labels = make_blobs_with_outliers(n_outliers=10)
-        score_with_outliers = calculate_davies_bouldin_index(X, labels)
-
-        mask = labels != -1
-        score_filtered = calculate_davies_bouldin_index(
-            X[mask], labels[mask]
-        )
-        assert abs(score_with_outliers - score_filtered) < 1e-9
-
-    def test_single_cluster_returns_nan(self):
-        """Single cluster after filtering → nan."""
-        X, _ = make_clean_blobs()
-        labels = np.zeros(len(X), dtype=int)
-        result = calculate_davies_bouldin_index(X, labels)
-        assert np.isnan(result)
-
-    def test_all_outliers_returns_nan(self):
-        """All noise → nan."""
-        X, _ = make_clean_blobs()
-        labels = np.full(len(X), -1, dtype=int)
-        result = calculate_davies_bouldin_index(X, labels)
-        assert np.isnan(result)
-
-
-class TestCalculateCalinskiHarabaszIndex:
-
-    def test_valid_clusters_returns_positive_float(self):
-        """CHI must be > 0 for valid clustering."""
-        X, labels = make_clean_blobs(n_clusters=3)
-        score = calculate_calinski_harabasz_index(X, labels)
-        assert isinstance(score, float)
-        assert score > 0.0
-
-    def test_outliers_excluded(self):
-        """CHI with outliers must equal CHI on filtered data."""
-        X, labels = make_blobs_with_outliers(n_outliers=10)
-        score_with_outliers = calculate_calinski_harabasz_index(X, labels)
-
-        mask = labels != -1
-        score_filtered = calculate_calinski_harabasz_index(
-            X[mask], labels[mask]
-        )
-        assert abs(score_with_outliers - score_filtered) < 1e-9
-
-    def test_single_cluster_returns_nan(self):
-        """Single cluster after filtering → nan."""
-        X, _ = make_clean_blobs()
-        labels = np.zeros(len(X), dtype=int)
-        result = calculate_calinski_harabasz_index(X, labels)
-        assert np.isnan(result)
-
-    def test_all_outliers_returns_nan(self):
-        """All noise → nan."""
-        X, _ = make_clean_blobs()
-        labels = np.full(len(X), -1, dtype=int)
-        result = calculate_calinski_harabasz_index(X, labels)
-        assert np.isnan(result)
-
-
 class TestEvaluateClustering:
 
     def test_returns_dict_with_required_keys(self):
-        """evaluate_clustering must return all 7 expected keys."""
+        """evaluate_clustering must return all 5 expected keys."""
         X, labels = make_clean_blobs(n_clusters=3)
         result = evaluate_clustering(X, labels, "kmeans", "freq_baseline")
         expected_keys = {
@@ -202,8 +124,6 @@ class TestEvaluateClustering:
             "n_clusters",
             "n_outliers",
             "silhouette",
-            "davies_bouldin",
-            "calinski_harabasz",
         }
         assert set(result.keys()) == expected_keys
 
@@ -244,14 +164,12 @@ class TestEvaluateClustering:
         result = evaluate_clustering(X, labels, "kmeans", "freq_baseline")
         assert isinstance(result["n_clusters"], int)
 
-    def test_all_outliers_produces_nan_metrics(self):
-        """When all labels are -1, all three metrics must be nan."""
+    def test_all_outliers_produces_nan_silhouette(self):
+        """When all labels are -1, silhouette must be nan."""
         X, _ = make_clean_blobs()
         labels = np.full(len(X), -1, dtype=int)
         result = evaluate_clustering(X, labels, "dbscan", "freq_baseline")
         assert np.isnan(result["silhouette"])
-        assert np.isnan(result["davies_bouldin"])
-        assert np.isnan(result["calinski_harabasz"])
 
     def test_som_labels_accepted(self):
         # SOM produces integer labels >= 0, must be evaluated like any algo.
@@ -261,13 +179,11 @@ class TestEvaluateClustering:
         assert result["n_outliers"] == 0
         assert not np.isnan(result["silhouette"])
 
-    def test_metrics_have_expected_sign(self):
-        """Silhouette in [-1,1], DBI >= 0, CHI > 0 for valid clustering."""
+    def test_silhouette_in_valid_range(self):
+        """Silhouette must be in [-1, 1] for a valid clustering."""
         X, labels = make_clean_blobs(n_clusters=3)
         result = evaluate_clustering(X, labels, "kmeans", "freq_baseline")
         assert -1.0 <= result["silhouette"] <= 1.0
-        assert result["davies_bouldin"] >= 0.0
-        assert result["calinski_harabasz"] > 0.0
 
 
 class TestBuildComparisonTable:
@@ -281,8 +197,6 @@ class TestBuildComparisonTable:
                 "n_clusters": 3,
                 "n_outliers": 0,
                 "silhouette": 0.45,
-                "davies_bouldin": 0.80,
-                "calinski_harabasz": 120.0,
             },
             {
                 "algo_name": "dbscan",
@@ -290,8 +204,6 @@ class TestBuildComparisonTable:
                 "n_clusters": 3,
                 "n_outliers": 15,
                 "silhouette": 0.62,
-                "davies_bouldin": 0.55,
-                "calinski_harabasz": 200.0,
             },
             {
                 "algo_name": "som",
@@ -299,8 +211,6 @@ class TestBuildComparisonTable:
                 "n_clusters": 3,
                 "n_outliers": 0,
                 "silhouette": 0.51,
-                "davies_bouldin": 0.70,
-                "calinski_harabasz": 150.0,
             },
         ]
 
@@ -327,7 +237,7 @@ class TestBuildComparisonTable:
         assert list(df.index) == list(range(len(df)))
 
     def test_all_columns_present(self):
-        """DataFrame must contain all 7 expected columns."""
+        """DataFrame must contain all 5 expected columns."""
         df = build_comparison_table(self._make_results())
         expected_cols = {
             "algo_name",
@@ -335,8 +245,6 @@ class TestBuildComparisonTable:
             "n_clusters",
             "n_outliers",
             "silhouette",
-            "davies_bouldin",
-            "calinski_harabasz",
         }
         assert expected_cols.issubset(set(df.columns))
 
@@ -350,8 +258,6 @@ class TestBuildComparisonTable:
                 "n_clusters": 0,
                 "n_outliers": 100,
                 "silhouette": float("nan"),
-                "davies_bouldin": float("nan"),
-                "calinski_harabasz": float("nan"),
             }
         )
         df = build_comparison_table(results)

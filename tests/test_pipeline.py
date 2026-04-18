@@ -406,8 +406,6 @@ class TestKMeansPipeline:
         assert result["algo_name"] == "kmeans"
         assert result["n_clusters"] == 3
         assert np.isfinite(result["silhouette"])
-        assert np.isfinite(result["davies_bouldin"])
-        assert np.isfinite(result["calinski_harabasz"])
 
 
 # 4b: DBSCAN end-to-end
