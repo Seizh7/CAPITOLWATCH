@@ -34,7 +34,6 @@ from capitolwatch.web.charts import (
     scatter_pca_plotly,
     scatter_tsne_plotly,
     som_map_plotly,
-    som_umatrix_plotly,
 )
 
 # Allow imports when streamlit changes the working directory
@@ -359,9 +358,9 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
             "their portfolios: they invest in niche asset classes "
             "(Municipal Securities, LLCs, alternative funds) that are "
             "statistically rare in the dataset. "
-            "Rick Scott stands out with 455 assets — 6× the average — "
+            "Rick Scott stands out with 455 assets — 6x the average — "
             "and is the only politician unanimously flagged by all four "
-            "methods (K-Means, DBSCAN, SOM ×2)."
+            "methods (K-Means, DBSCAN, SOM x2)."
         )
 
 
@@ -370,8 +369,7 @@ def _tab_som(politician_metadata: pd.DataFrame) -> None:
     Render the "SOM" tab.
 
     Trains a 7x7 Self-Organizing Map (cached) and shows:
-      - the U-Matrix heatmap
-      - the political map with politicians overlaid on the grid
+      - the political map (U-Matrix + politicians overlaid on the grid)
 
     Args:
         politician_metadata (pd.DataFrame): Politician names and parties.
@@ -393,30 +391,17 @@ def _tab_som(politician_metadata: pd.DataFrame) -> None:
     hover_texts = _build_hover_texts(politician_metadata, labels)
     party_colors = _get_party_colors(politician_metadata)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("U-Matrix")
-        st.plotly_chart(
-            som_umatrix_plotly(
-                umatrix,
-                title=f"SOM U-Matrix — {feature_type}",
-            ),
-            use_container_width=True,
-        )
-
-    with col2:
-        st.subheader("Political map (party colours)")
-        st.plotly_chart(
-            som_map_plotly(
-                umatrix,
-                bmu_coords,
-                hover_texts,
-                party_colors,
-                title=f"SOM map — {feature_type}",
-            ),
-            use_container_width=True,
-        )
+    st.subheader("Political map (party colours)")
+    st.plotly_chart(
+        som_map_plotly(
+            umatrix,
+            bmu_coords,
+            hover_texts,
+            party_colors,
+            title=f"SOM map — {feature_type}",
+        ),
+        use_container_width=True,
+    )
 
     st.caption(
         "Grid 7x7 = 49 neurons for 79 politicians. "
@@ -488,7 +473,7 @@ def _tab_external(
         heatmap_confusion_plotly,
     )
 
-    st.subheader("Confusion matrices — cluster × party")
+    st.subheader("Confusion matrices — cluster x party")
 
     # Map party strings to integer codes expected by build_confusion_matrix()
     _PARTY_ORDER = ["Republican", "Democratic", "Independent"]
