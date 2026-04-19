@@ -36,7 +36,7 @@ from capitolwatch.analysis.visualization import (
 )
 
 OUTPUT_DIR = Path("data/visualizations")
-INTERNAL_METRICS = ["silhouette", "davies_bouldin", "calinski_harabasz"]
+INTERNAL_METRICS = ["silhouette"]
 
 
 def run_simple_plots(output_dir: Path = OUTPUT_DIR) -> None:

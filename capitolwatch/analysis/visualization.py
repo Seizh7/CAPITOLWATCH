@@ -32,7 +32,7 @@ CLUSTER_PALETTE = "tab10"
 OUTLIER_COLOR = "#AAAAAA"
 
 # Metrics produced by run_evaluation.py that we want barplots for.
-INTERNAL_METRICS = ["silhouette", "davies_bouldin", "calinski_harabasz"]
+INTERNAL_METRICS = ["silhouette"]
 
 
 def _save_or_show(fig: plt.Figure, output_path: Optional[Path]) -> None:
