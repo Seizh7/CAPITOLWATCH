@@ -11,7 +11,6 @@ source = capitolwatch
 omit =
     # Entry-point scripts — not unit-testable
     capitolwatch/analysis/run_*.py
-    capitolwatch/analysis/generate_all_plots.py
     capitolwatch/analysis/run_cluster_analysis.py
     capitolwatch/analysis/run_evaluation.py
     capitolwatch/analysis/run_visualization.py
