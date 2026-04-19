@@ -107,7 +107,7 @@ def load_assets_with_products():
     Returns:
         pd.DataFrame: Enriched DataFrame with columns:
                      [asset_id, politician_id, product_id, value,
-                      value_numeric, product_name, subtype]
+                      value_numeric, product_name, subtype, sector]
     """
     from capitolwatch.services.analytics import (
         get_assets_with_products_dataframe
@@ -124,13 +124,18 @@ def load_assets_with_products():
                      .fillna('Uncategorized')
                      .replace('', 'Uncategorized'))
 
+    # Normalize empty sectors to 'Uncategorized'
+    df['sector'] = (df['sector']
+                    .fillna('Uncategorized')
+                    .replace('', 'Uncategorized'))
+
     # Creates a numeric representation of value ranges for analysis
     df['value_numeric'] = df['value'].apply(parse_value_range)
 
     # Validation: check required columns exist
     required_columns = [
         'asset_id', 'politician_id', 'product_id',
-        'value', 'product_name', 'subtype', 'value_numeric'
+        'value', 'product_name', 'subtype', 'sector', 'value_numeric'
     ]
     missing_columns = [
         col for col in required_columns if col not in df.columns

@@ -347,6 +347,7 @@ def get_assets_with_products_dataframe(
             - value: String representation of value range
             - product_name: Name of the product
             - subtype: Product subtype (e.g., 'Stock', 'Mutual Fund')
+            - sector: Economic sector (e.g., 'Technology', 'Healthcare')
 
         Returns all assets with values for active politicians, including:
             - Standalone assets (bank accounts, pension plans)
@@ -360,7 +361,8 @@ def get_assets_with_products_dataframe(
             a.product_id,
             a.value,
             pr.name AS product_name,
-            pr.subtype
+            pr.subtype,
+            pr.sector
         FROM assets a
         INNER JOIN products pr ON a.product_id = pr.id
         INNER JOIN reports r ON a.report_id = r.id

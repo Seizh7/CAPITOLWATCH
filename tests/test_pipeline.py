@@ -64,7 +64,8 @@ def minimal_db(tmp_path: Path) -> Path:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             type TEXT NOT NULL,
-            subtype TEXT
+            subtype TEXT,
+            sector TEXT
         );
         CREATE TABLE assets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
