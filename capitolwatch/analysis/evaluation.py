@@ -193,9 +193,9 @@ def calculate_nmi(
 def calculate_v_measure(
     labels_true: np.ndarray,
     labels_pred: np.ndarray,
-) -> dict:
+) -> float:
     """
-    Compute homogeneity, completeness, and V-Measure.
+    Compute the V-Measure between true and predicted labels.
 
     Args:
         labels_true (np.ndarray): Ground-truth labels. Shape (n_samples,).
@@ -203,8 +203,7 @@ def calculate_v_measure(
             Label -1 (noise) is excluded before scoring.
 
     Returns:
-        dict: Keys — homogeneity, completeness, v_measure.
-            Values float in [0, 1], or np.nan if guard triggers.
+        float: V-Measure score in [0, 1], or np.nan if guard triggers.
     """
     # Same mask + guard pattern as calculate_ari
     mask = labels_pred != -1
@@ -212,13 +211,11 @@ def calculate_v_measure(
     lp_filtered = labels_pred[mask]
 
     if len(np.unique(lp_filtered)) < 2:
-        return {
-            "homogeneity": np.nan, "completeness": np.nan, "v_measure": np.nan
-        }
+        return np.nan
 
     # homogeneity_completeness_v_measure returns a tuple (h, c, v)
-    h, c, v = homogeneity_completeness_v_measure(lt_filtered, lp_filtered)
-    return {"homogeneity": h, "completeness": c, "v_measure": v}
+    _, _, v = homogeneity_completeness_v_measure(lt_filtered, lp_filtered)
+    return float(v)
 
 
 def evaluate_clustering_external(
@@ -237,23 +234,18 @@ def evaluate_clustering_external(
         feature_type (str): Feature set name (e.g., "freq_baseline").
 
     Returns:
-        dict: Keys — algo_name, feature_type, ari, nmi, homogeneity,
-            completeness, v_measure.
+        dict: Keys — algo_name, feature_type, ari, nmi, v_measure.
     """
     ari = calculate_ari(labels_true, labels_pred)
     nmi = calculate_nmi(labels_true, labels_pred)
+    v_measure = calculate_v_measure(labels_true, labels_pred)
 
-    # Call calculate_v_measure and unpack the result dict into local variables
-    vm = calculate_v_measure(labels_true, labels_pred)
-    # Build and return the result dict with all 7 keys
     return {
         "algo_name": algo_name,
         "feature_type": feature_type,
         "ari": ari,
         "nmi": nmi,
-        "homogeneity": vm["homogeneity"],
-        "completeness": vm["completeness"],
-        "v_measure": vm["v_measure"],
+        "v_measure": v_measure,
     }
 
 
