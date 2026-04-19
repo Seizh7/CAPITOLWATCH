@@ -12,7 +12,6 @@ Store layout:
     ├── metadata.json          -- creation date, shapes, feature names, stats
     ├── freq_baseline.pkl      -- combined freq matrix + numerical features
     ├── freq_weighted.pkl      -- combined weighted matrix + numerical features
-    ├── tfidf_baseline.pkl     -- TF-IDF matrix (max_features=500)
     └── politician_labels.pkl  -- id, first_name, last_name, party
 
 Main functions:
@@ -35,7 +34,6 @@ from capitolwatch.analysis.feature_engineering import (
     create_weighted_frequency_vectors,
     compute_numerical_features,
     combine_features,
-    create_tfidf_vectors,
 )
 
 FEATURE_STORE_DIR = Path("data/feature_store")
@@ -43,7 +41,6 @@ FEATURE_STORE_DIR = Path("data/feature_store")
 FEATURE_FILES = {
     "freq_baseline": FEATURE_STORE_DIR / "freq_baseline.pkl",
     "freq_weighted": FEATURE_STORE_DIR / "freq_weighted.pkl",
-    "tfidf_baseline": FEATURE_STORE_DIR / "tfidf_baseline.pkl",
     "politician_labels": FEATURE_STORE_DIR / "politician_labels.pkl",
 }
 
@@ -88,10 +85,9 @@ def build_feature_store():
         1. Load politicians + assets from the database.
         2. Build freq_baseline  (frequency vectors + numerical features).
         3. Build freq_weighted  (weighted vectors + numerical features).
-        4. Build tfidf_baseline (TF-IDF, max_features=500).
-        5. Save each matrix as a .pkl file.
-        6. Save politician_labels (id, first_name, last_name, party).
-        7. Write metadata.json.
+        4. Save each matrix as a .pkl file.
+        5. Save politician_labels (id, first_name, last_name, party).
+        6. Write metadata.json.
 
     Returns:
         dict: metadata dict that was written to disk.
@@ -116,21 +112,17 @@ def build_feature_store():
         weighted_matrix, numerical_features
     )
 
-    # Step 4 – tfidf_baseline
-    tfidf_matrix, _ = create_tfidf_vectors(politicians, assets)
-
-    # Step 5 – persist feature matrices
+    # Step 4 – persist feature matrices
     _save(freq_baseline_matrix, FEATURE_FILES["freq_baseline"])
     _save(freq_weighted_matrix, FEATURE_FILES["freq_weighted"])
-    _save(tfidf_matrix, FEATURE_FILES["tfidf_baseline"])
 
-    # Step 6 – persist politician labels
+    # Step 5 – persist politician labels
     politician_labels = politicians[
         ['id', 'first_name', 'last_name', 'party']
     ].copy()
     _save(politician_labels, FEATURE_FILES["politician_labels"])
 
-    # Step 7 – metadata.json
+    # Step 6 – metadata.json
     metadata = {
         "creation_date": datetime.now().isoformat(timespec="seconds"),
         "n_politicians": len(politicians),
@@ -144,11 +136,6 @@ def build_feature_store():
                 "shape": list(freq_weighted_matrix.shape),
                 "feature_names": list(freq_weighted_matrix.columns),
                 "stats": _build_stats(freq_weighted_matrix),
-            },
-            "tfidf_baseline": {
-                "shape": list(tfidf_matrix.shape),
-                "feature_names": list(tfidf_matrix.columns),
-                "stats": _build_stats(tfidf_matrix),
             },
         },
     }
@@ -165,7 +152,7 @@ def load_features(feature_type):
 
     Args:
         feature_type (str): One of "freq_baseline", "freq_weighted",
-                            "tfidf_baseline", "politician_labels".
+                            "politician_labels".
 
     Returns:
         pd.DataFrame: The stored feature matrix.

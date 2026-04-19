@@ -6,7 +6,6 @@ import pandas as pd
 from capitolwatch.analysis.data_loader import (
     load_politicians, load_assets_with_products
 )
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 def get_sorted_subtypes(assets_df):
@@ -147,64 +146,6 @@ def combine_features(freq_matrix, numerical_features):
     return combined_matrix
 
 
-def build_politician_documents(politicians_df, assets_df):
-    """
-    Build one text document per politician from their unique product names.
-
-    Args:
-        politicians_df (pd.DataFrame): Active politicians [id, ...]
-        assets_df (pd.DataFrame): Assets with [politician_id, product_name]
-
-    Returns:
-        list[str]: One string per politician, containing space-separated
-            unique product names
-    """
-    documents = []
-    for pid in politicians_df['id']:
-        politician_assets = assets_df[assets_df['politician_id'] == pid]
-        unique_product_names = politician_assets[
-            'product_name'
-        ].dropna().unique()
-        document = " ".join(unique_product_names)
-        documents.append(document)
-
-    return documents
-
-
-def create_tfidf_vectors(politicians_df, assets_df, max_features=500):
-    """
-    Apply TF-IDF vectorization on politician portfolios.
-
-    Note: min_df filtering is ineffective here because fund maturity years
-    (2023, 2024, 2025...) appear across many portfolios and always fill the
-    freed vocabulary slots. Numeric noise is a known limitation of bag-of-words
-    on financial product names without domain-specific preprocessing.
-
-    Args:
-        politicians_df (pd.DataFrame): Active politicians
-        assets_df (pd.DataFrame): Assets with product names
-        max_features (int): Vocabulary size limit
-
-    Returns:
-        tuple: (tfidf_matrix as DataFrame, vectorizer)
-    """
-    documents = build_politician_documents(politicians_df, assets_df)
-
-    vectorizer = TfidfVectorizer(max_features=max_features)
-
-    # fit_transform on documents -> sparse matrix
-    fit_matrix = vectorizer.fit_transform(documents)
-
-    # Convert to DataFrame with politician_id as index
-    tfidf_df = pd.DataFrame(
-        fit_matrix.toarray(),
-        index=politicians_df['id'],
-        columns=vectorizer.get_feature_names_out()
-    )
-    tfidf_df.index.name = 'politician_id'
-    return tfidf_df, vectorizer
-
-
 def analyze_sparsity(matrix, name="matrix"):
     """
     Compute and print sparsity statistics of a feature matrix.
@@ -255,12 +196,6 @@ if __name__ == "__main__":
     print(f"Combined feature matrix shape: {combined_features.shape}")
     print(combined_features.head())
 
-    # Create TF-IDF vectors
-    tfidf_df, vectorizer = create_tfidf_vectors(politicians, assets)
-    print(f"TF-IDF matrix shape: {tfidf_df.shape}")
-    print(tfidf_df.head(), "\n")
-
     # Analyze sparsity
     analyze_sparsity(freq_matrix, name="Frequency matrix")
     analyze_sparsity(weighted_freq_matrix, name="Weighted frequency matrix")
-    analyze_sparsity(tfidf_df, name="TF-IDF matrix")
