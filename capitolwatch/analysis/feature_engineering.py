@@ -22,6 +22,20 @@ def get_sorted_subtypes(assets_df):
     return sorted(subtypes)
 
 
+def get_sorted_sectors(assets_df):
+    """
+    Extract a sorted list of known sectors, excluding 'Uncategorized'.
+
+    Args:
+        assets_df (pd.DataFrame): Assets DataFrame with 'sector' column.
+
+    Returns:
+        list[str]: Sorted list of known sector names (no 'Uncategorized').
+    """
+    sectors = assets_df['sector'].dropna().unique()
+    return sorted(sector for sector in sectors if sector != 'Uncategorized')
+
+
 def create_frequency_vectors(politicians_df, assets_df, subtypes):
     """
     Build a frequency matrix: count of assets per politician per subtype.
@@ -97,6 +111,47 @@ def create_weighted_frequency_vectors(politicians_df, assets_df, subtypes):
     return weighted_matrix
 
 
+def create_sector_frequency_vectors(politicians_df, assets_df, sectors):
+    """
+    Build a sector frequency matrix: count of assets per politician per sector.
+
+    Args:
+        politicians_df (pd.DataFrame): Active politicians DataFrame [id, ...].
+        assets_df (pd.DataFrame): Enriched assets DataFrame with columns
+            ['politician_id', 'sector', ...].
+        sectors (list[str]): Ordered list of known sectors (columns),
+            as returned by :func:`get_sorted_sectors` (no 'Uncategorized').
+
+    Returns:
+        pd.DataFrame: Matrix of shape (n_politicians, n_sectors),
+                      indexed by politician_id, with integer counts.
+    """
+    # Count (politician_id, sector) occurrences
+    sector_matrix = (
+        assets_df.groupby(['politician_id', 'sector'])
+        .size()
+        # 'Uncategorized' entries, dropped below
+        .unstack(fill_value=0)
+    )
+
+    # Ensure all politicians appear as rows
+    sector_matrix = sector_matrix.reindex(
+        index=politicians_df['id'],
+        fill_value=0
+    )
+
+    # Reindex to known sectors only
+    # Drops 'Uncategorized'
+    sector_matrix = sector_matrix.reindex(
+        columns=sectors,
+        fill_value=0
+    )
+
+    sector_matrix.index.name = 'politician_id'
+    sector_matrix.columns.name = None
+    return sector_matrix
+
+
 def compute_numerical_features(freq_matrix):
     """
     Compute 3 summary features per politician:
@@ -169,6 +224,7 @@ if __name__ == "__main__":
     politicians = load_politicians()
     assets = load_assets_with_products()
 
+    # SUBTYPE pipeline
     # Get sorted subtypes
     subtypes = get_sorted_subtypes(assets)
     print(f"Unique subtypes : ({len(subtypes)})\n")
@@ -194,8 +250,29 @@ if __name__ == "__main__":
     # Combine all features
     combined_features = combine_features(freq_matrix, numerical_features)
     print(f"Combined feature matrix shape: {combined_features.shape}")
-    print(combined_features.head())
+    print(combined_features.head(), "\n")
 
     # Analyze sparsity
-    analyze_sparsity(freq_matrix, name="Frequency matrix")
-    analyze_sparsity(weighted_freq_matrix, name="Weighted frequency matrix")
+    analyze_sparsity(freq_matrix, name="freq_baseline (subtype)")
+    analyze_sparsity(weighted_freq_matrix, name="freq_weighted (subtype)")
+
+    # SECTOR pipeline
+    print()
+    # Get sorted sectors
+    sectors = get_sorted_sectors(assets)
+    print(f"Known sectors ({len(sectors)}): {sectors}\n")
+
+    # Create sector frequency vectors
+    sector_matrix = create_sector_frequency_vectors(
+        politicians, assets, sectors
+    )
+    print(f"Sector frequency matrix shape: {sector_matrix.shape}")
+    print(sector_matrix.head(), "\n")
+
+    # Compute numerical features for sector matrix
+    sector_numerical = compute_numerical_features(sector_matrix)
+    sector_combined = combine_features(sector_matrix, sector_numerical)
+    print(f"sector_baseline combined shape: {sector_combined.shape}\n")
+
+    # Analyze sparsity of sector matrix
+    analyze_sparsity(sector_matrix, name="sector_baseline (sector)")
