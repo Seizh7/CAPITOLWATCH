@@ -7,16 +7,13 @@ Visualization pipeline for all 6 clustering experiments.
 
 Generates static PNG files and saves them to data/visualizations/.
 
-Plots produced per experiment (6 experiments × 4 plots = 24 files):
+Plots produced per experiment (6 experiments x 3 plots = 18 files):
     - heatmap_{algo}_{feature_type}.png  : mean feature value per cluster
     - sizes_{algo}_{feature_type}.png    : number of politicians per cluster
     - pca_{algo}_{feature_type}.png      : 2D scatter plot via PCA
-    - tsne_{algo}_{feature_type}.png     : 2D scatter plot via t-SNE
 
-Plus one barplot per internal metric (3 files):
+Plus one barplot per internal metric:
     - metrics_silhouette.png
-    - metrics_davies_bouldin.png
-    - metrics_calinski_harabasz.png
 
 Usage:
     python -m capitolwatch.analysis.run_visualization
@@ -138,39 +135,8 @@ def run_pca_plots(output_dir: Path = OUTPUT_DIR) -> None:
         plot_dimensionality_reduction(
             X,
             labels,
-            method="pca",
             title=f"{label} — PCA",
             output_path=output_dir / f"pca_{algo}_{feature_type}.png",
-        )
-
-
-def run_tsne_plots(output_dir: Path = OUTPUT_DIR) -> None:
-    """
-    Generate t-SNE 2D scatter plots for all 6 experiments.
-
-    t-SNE preserves local neighbourhood structure, which makes clusters
-    appear more visually separated than PCA. Useful for comparison.
-
-    Args:
-        output_dir (Path): Directory where PNG files are saved.
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    configs = _build_experiment_configs()
-
-    for cfg in configs:
-        algo = cfg["algo"]
-        feature_type = cfg["feature_type"]
-        label = f"{algo} / {feature_type}"
-        print(f"  (t-SNE) {label}")
-
-        X, labels = cfg["loader"]()
-
-        plot_dimensionality_reduction(
-            X,
-            labels,
-            method="tsne",
-            title=f"{label} \u2014 t-SNE",
-            output_path=output_dir / f"tsne_{algo}_{feature_type}.png",
         )
 
 
@@ -183,8 +149,5 @@ if __name__ == "__main__":
 
     print("\n=== PCA scatter plots ===")
     run_pca_plots()
-
-    print("\n=== t-SNE scatter plots ===")
-    run_tsne_plots()
 
     print(f"\nAll plots saved to {OUTPUT_DIR}/")

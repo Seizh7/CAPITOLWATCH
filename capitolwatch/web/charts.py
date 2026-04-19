@@ -12,7 +12,6 @@ arrays and labels.
 
 Main functions:
     scatter_pca_plotly        : PCA 2D scatter with all reduction inside
-    scatter_tsne_plotly       : t-SNE 2D scatter with all reduction inside
     heatmap_centroids_plotly  : mean investment value per cluster
     barplot_metrics_plotly    : metric comparison across experiments
     heatmap_confusion_plotly  : cluster x party confusion matrix
@@ -20,13 +19,10 @@ Main functions:
     som_map_plotly            : politicians mapped on the SOM grid
 """
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 
 
 # --- Module-level constants (override externally if needed) ---
@@ -162,49 +158,6 @@ def scatter_pca_plotly(
         title=title or "PCA 2D — clustering results",
         x_label="PCA Component 1",
         y_label="PCA Component 2",
-    )
-
-
-def scatter_tsne_plotly(
-    X: np.ndarray,
-    labels: np.ndarray,
-    hover_texts: list[str],
-    title: str = "",
-    perplexity: Optional[int] = None,
-) -> go.Figure:
-    """
-    Reduce X to 2D with t-SNE and produce an interactive scatter plot.
-
-    perplexity is clamped to n_samples - 1 when the dataset is small
-    (< 30 samples) to avoid a ValueError from sklearn.
-
-    Args:
-        X (np.ndarray): Feature matrix of shape (n_samples, n_features).
-        labels (np.ndarray): Cluster labels of shape (n_samples,).
-            Label -1 = outlier.
-        hover_texts (list[str]): Tooltip string for each sample.
-        title (str): Figure title. Auto-generated if empty.
-        perplexity (Optional[int]): t-SNE perplexity. Defaults to
-            min(30, n_samples - 1).
-
-    Returns:
-        go.Figure: 2-D t-SNE scatter figure.
-    """
-    eff_perplexity = (
-        perplexity if perplexity is not None else min(30, len(X) - 1)
-    )
-    X_2d = TSNE(
-        n_components=2,
-        perplexity=eff_perplexity,
-        random_state=42,
-    ).fit_transform(X)
-    return _build_scatter_figure(
-        X_2d,
-        labels,
-        hover_texts,
-        title=title or "t-SNE 2D — clustering results",
-        x_label="t-SNE Component 1",
-        y_label="t-SNE Component 2",
     )
 
 

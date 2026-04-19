@@ -110,24 +110,6 @@ class TestDBSCANClustererFit:
         assert -1 in c.labels_
 
 
-class TestDBSCANClustererPredict:
-
-    def test_predict_returns_labels(self):
-        """predict() must return a numpy array equal to labels_."""
-        X = make_matrix_with_outlier()
-        c = DBSCANClusterer(eps=0.7, min_samples=3)
-        c.fit(X)
-        pred = c.predict(X)
-        np.testing.assert_array_equal(pred, c.labels_)
-
-    def test_predict_raises_if_not_fitted(self):
-        """predict() must raise RuntimeError before fit()."""
-        c = DBSCANClusterer()
-        X = make_matrix_with_outlier()
-        with pytest.raises(RuntimeError, match="not fitted"):
-            c.predict(X)
-
-
 class TestDBSCANClustererGetParams:
 
     def test_get_params_returns_dict(self):

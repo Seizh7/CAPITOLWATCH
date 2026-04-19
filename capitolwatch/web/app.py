@@ -32,7 +32,6 @@ from capitolwatch.web.charts import (
     barplot_metrics_plotly,
     heatmap_centroids_plotly,
     scatter_pca_plotly,
-    scatter_tsne_plotly,
     som_map_plotly,
 )
 
@@ -293,29 +292,13 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     feature_names = list(raw_matrix.columns)
     hover_texts = _build_hover_texts(politician_metadata, labels)
 
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("PCA 2D")
-        st.plotly_chart(
-            scatter_pca_plotly(
-                X, labels, hover_texts, title="DBSCAN + freq_weighted — PCA"
-            ),
-            use_container_width=True,
-        )
-
-    with col2:
-        st.subheader("t-SNE 2D")
-        with st.spinner("Computing t-SNE..."):
-            st.plotly_chart(
-                scatter_tsne_plotly(
-                    X,
-                    labels,
-                    hover_texts,
-                    title="DBSCAN + freq_weighted — t-SNE",
-                ),
-                use_container_width=True,
-            )
+    st.subheader("PCA 2D")
+    st.plotly_chart(
+        scatter_pca_plotly(
+            X, labels, hover_texts, title="DBSCAN + freq_weighted — PCA"
+        ),
+        use_container_width=True,
+    )
 
     st.subheader("Centroid heatmap (mean investment value per cluster)")
     st.plotly_chart(

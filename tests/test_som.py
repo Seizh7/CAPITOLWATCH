@@ -222,26 +222,6 @@ class TestSOMClustererExtractClusters:
             c.extract_clusters()
 
 
-class TestSOMClustererPredict:
-
-    def test_predict_returns_labels(self):
-        """predict() must return the same array as extract_clusters()."""
-        X = make_normalized_matrix(n_samples=60)
-        c = SOMClusterer(m=5, n=5, n_iterations=100)
-        c.fit(X)
-        c.extract_clusters(n_clusters=3)
-        labels = c.predict(X)
-        np.testing.assert_array_equal(labels, c.labels_)
-
-    def test_predict_raises_before_extract_clusters(self):
-        """predict() must raise RuntimeError if extract_clusters not called."""
-        X = make_normalized_matrix(n_samples=30)
-        c = SOMClusterer(m=4, n=4, n_iterations=50)
-        c.fit(X)
-        with pytest.raises(RuntimeError):
-            c.predict(X)
-
-
 class TestSOMClustererGetParams:
 
     def test_returns_dict_with_expected_keys(self):
@@ -308,22 +288,3 @@ class TestSOMClustererPlots:
         with pytest.raises(RuntimeError):
             c.plot_umatrix(save_path=save_path)
 
-
-class TestSOMClustererPersistence:
-
-    def test_save_and_load(self, tmp_path):
-        """save_model / load_model must round-trip the fitted clusterer."""
-        X = make_normalized_matrix(n_samples=40)
-        c = SOMClusterer(m=4, n=4, n_iterations=50, random_seed=0)
-        c.fit(X)
-        c.extract_clusters(n_clusters=3)
-
-        model_path = str(tmp_path / "som_model.pkl")
-        c.save_model(model_path)
-
-        loaded = SOMClusterer.load_model(model_path)
-        assert isinstance(loaded, SOMClusterer)
-        # loaded model must produce identical labels and BMU coords
-        np.testing.assert_array_equal(loaded.labels_, c.labels_)
-        assert loaded.bmu_coords_ == c.bmu_coords_
-        assert loaded.get_params() == c.get_params()

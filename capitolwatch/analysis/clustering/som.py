@@ -92,23 +92,6 @@ class SOMClusterer(BaseClusterer):
         self.bmu_coords_ = self.get_bmu_coords(matrix)
         return self
 
-    def predict(self, matrix: np.ndarray) -> np.ndarray:
-        """
-        Return cluster labels assigned during extract_clusters().
-
-        Args:
-            matrix (np.ndarray): Feature matrix (ignored; labels are
-                stored from the last extract_clusters() call).
-
-        Returns:
-            np.ndarray: Cluster labels of shape (n_samples,).
-        """
-        if self.labels_ is None:
-            raise RuntimeError(
-                "Labels not set. Call extract_clusters() after fit()."
-            )
-        return self.labels_
-
     def get_params(self) -> dict:
         """
         Return the hyperparameters of this clusterer.

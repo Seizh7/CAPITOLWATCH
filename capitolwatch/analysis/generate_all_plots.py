@@ -8,11 +8,10 @@ Entry point to generate all static visualizations for the project.
 Generates PNG files in data/visualizations/ covering all 6 experiments
 (K-Means, DBSCAN, SOM x freq_baseline, freq_weighted):
 
-Per experiment (6 x 4 = 24 files):
+Per experiment (6 x 3 = 18 files):
     heatmap_{algo}_{feature_type}.png   — mean investment value per cluster
     sizes_{algo}_{feature_type}.png     — number of politicians per cluster
     pca_{algo}_{feature_type}.png       — PCA
-    tsne_{algo}_{feature_type}.png      — t-SNE
 
 Global comparison :
     metrics_silhouette.png
@@ -35,7 +34,6 @@ from capitolwatch.analysis.run_visualization import (
     run_metrics_barplots,
     run_pca_plots,
     run_simple_plots,
-    run_tsne_plots,
 )
 
 
@@ -57,9 +55,6 @@ def generate_all_plots(output_dir: Path = OUTPUT_DIR) -> None:
 
     print("\n3. PCA scatter plots")
     run_pca_plots(output_dir)
-
-    print("\n4. t-SNE scatter plots")
-    run_tsne_plots(output_dir)
 
     pngs = list(output_dir.glob("*.png"))
     print(f"\n{len(pngs)} PNG files in {output_dir}/")

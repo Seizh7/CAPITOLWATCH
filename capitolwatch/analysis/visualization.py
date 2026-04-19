@@ -24,7 +24,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 
 OUTPUT_DIR = Path("data/visualizations")
 
@@ -54,12 +53,11 @@ def _save_or_show(fig: plt.Figure, output_path: Optional[Path]) -> None:
 def plot_dimensionality_reduction(
     X: np.ndarray,
     labels: np.ndarray,
-    method: str = "pca",
     title: str = "",
     output_path: Optional[Path] = None,
 ) -> None:
     """
-    Scatter plot of clustering results reduced to 2D.
+    Scatter plot of clustering results reduced to 2D via PCA.
 
     Outliers (label == -1) are always shown in grey with a different marker
     so they stand out without a dedicated cluster color.
@@ -68,25 +66,11 @@ def plot_dimensionality_reduction(
         X (np.ndarray): Feature matrix of shape (n_samples, n_features).
         labels (np.ndarray): Cluster labels of shape (n_samples,).
             -1 = outlier.
-        method (str): Reduction method — "pca" or "tsne".
         title (str): Plot title. Auto-generated if empty.
         output_path (Optional[Path]): Save path. Displays
             interactively if None.
-
-    Raises:
-        ValueError: If method is not "pca" or "tsne".
     """
-    if method not in ("pca", "tsne"):
-        raise ValueError(f"method must be 'pca' or 'tsne', got '{method}'")
-
-    # Reduce to 2D. perplexity for t-SNE must be < n_samples.
-    if method == "pca":
-        X_2d = PCA(n_components=2, random_state=42).fit_transform(X)
-    else:
-        perplexity = min(30, len(X) - 1)
-        X_2d = TSNE(
-            n_components=2, perplexity=perplexity, random_state=42
-        ).fit_transform(X)
+    X_2d = PCA(n_components=2, random_state=42).fit_transform(X)
 
     fig, ax = plt.subplots(figsize=(10, 7))
 
@@ -115,9 +99,9 @@ def plot_dimensionality_reduction(
             label=cluster_name,
         )
 
-    ax.set_title(title or f"Clustering ({method.upper()})", fontsize=13)
-    ax.set_xlabel(f"{method.upper()} Component 1")
-    ax.set_ylabel(f"{method.upper()} Component 2")
+    ax.set_title(title or "Clustering (PCA)", fontsize=13)
+    ax.set_xlabel("PCA Component 1")
+    ax.set_ylabel("PCA Component 2")
     ax.legend(loc="best", fontsize=9)
 
     _save_or_show(fig, output_path)
@@ -315,14 +299,9 @@ def generate_all_plots(output_dir: Path = OUTPUT_DIR) -> None:
         X_raw = raw_matrix.to_numpy()
 
         plot_dimensionality_reduction(
-            X, labels, method="pca",
+            X, labels,
             title=f"{label} — PCA",
             output_path=output_dir / f"pca_{algo}_{feature_type}.png",
-        )
-        plot_dimensionality_reduction(
-            X, labels, method="tsne",
-            title=f"{label} — t-SNE",
-            output_path=output_dir / f"tsne_{algo}_{feature_type}.png",
         )
         plot_centroid_heatmap(
             X_raw, labels, feature_names,

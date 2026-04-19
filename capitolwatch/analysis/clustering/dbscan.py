@@ -78,25 +78,6 @@ class DBSCANClusterer(BaseClusterer):
 
         return self
 
-    def predict(self, matrix: np.ndarray) -> np.ndarray:
-        """
-        Return cluster labels produced during fit().
-
-        Args:
-            matrix (np.ndarray): Feature matrix (must match the matrix
-                used in fit()).
-
-        Returns:
-            np.ndarray: Cluster labels of shape (n_samples,).
-
-        Raises:
-            RuntimeError: If the model has not been fitted yet.
-        """
-        if self._model is None:
-            raise RuntimeError("Model is not fitted. Call fit() first.")
-        # labels come from fit(), not generalized
-        return self.labels_
-
     def get_params(self) -> dict:
         """
         Return the hyperparameters of this clusterer.
