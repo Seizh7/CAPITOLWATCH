@@ -436,12 +436,10 @@ def print_external_comparison_table(df: pd.DataFrame) -> None:
         "feature_type": "Feature type",
         "ari": "ARI",
         "nmi": "NMI",
-        "homogeneity": "Homogeneity",
-        "completeness": "Completeness",
         "v_measure": "V-Measure",
     }
     display = df.rename(columns=col_fmt)
-    for col in ["ARI", "NMI", "Homogeneity", "Completeness", "V-Measure"]:
+    for col in ["ARI", "NMI", "V-Measure"]:
         display[col] = display[col].apply(
             lambda v: f"{v:.4f}" if not pd.isna(v) else "nan"
         )

@@ -415,30 +415,24 @@ class TestCalculateNmi:
 
 class TestCalculateVMeasure:
 
-    def test_returns_dict_with_three_keys(self):
-        # calculate_v_measure must return homogeneity, completeness, v_measure.
+    def test_returns_float(self):
+        # calculate_v_measure must return a float (v_measure only).
         labels = np.array([0, 0, 1, 1])
         result = calculate_v_measure(labels, labels.copy())
-        assert set(result.keys()) == {
-            "homogeneity", "completeness", "v_measure"
-        }
+        assert isinstance(result, float)
 
-    def test_perfect_agreement_all_ones(self):
-        """All three values must be 1.0 when pred == true."""
+    def test_perfect_agreement_returns_one(self):
+        """V-Measure must be 1.0 when pred == true."""
         labels = np.array([0, 0, 1, 1, 2, 2])
         result = calculate_v_measure(labels, labels.copy())
-        assert abs(result["homogeneity"] - 1.0) < 1e-9
-        assert abs(result["completeness"] - 1.0) < 1e-9
-        assert abs(result["v_measure"] - 1.0) < 1e-9
+        assert abs(result - 1.0) < 1e-9
 
-    def test_all_outliers_returns_nan_dict(self):
-        """All pred == -1 → all three values must be np.nan."""
+    def test_all_outliers_returns_nan(self):
+        """All pred == -1 → must return np.nan."""
         lt = np.array([0, 1, 0])
         lp = np.full(3, -1)
         result = calculate_v_measure(lt, lp)
-        assert np.isnan(result["homogeneity"])
-        assert np.isnan(result["completeness"])
-        assert np.isnan(result["v_measure"])
+        assert np.isnan(result)
 
     def test_outliers_excluded(self):
         """Result with outliers must match result on filtered data."""
@@ -447,15 +441,14 @@ class TestCalculateVMeasure:
         mask = lp != -1
         expected = calculate_v_measure(lt[mask], lp[mask])
         result = calculate_v_measure(lt, lp)
-        assert abs(result["v_measure"] - expected["v_measure"]) < 1e-9
+        assert abs(result - expected) < 1e-9
 
-    def test_values_in_range(self):
-        """All three values must be in [0, 1]."""
+    def test_value_in_range(self):
+        """V-Measure must be in [0, 1]."""
         lt = make_party_labels()
         lp = np.random.default_rng(5).integers(0, 3, size=79)
         result = calculate_v_measure(lt, lp)
-        for key in ("homogeneity", "completeness", "v_measure"):
-            assert 0.0 <= result[key] <= 1.0
+        assert 0.0 <= result <= 1.0
 
 
 class TestEvaluateClusteringExternal:
@@ -467,7 +460,7 @@ class TestEvaluateClusteringExternal:
         return lt, lp
 
     def test_returns_dict_with_required_keys(self):
-        """evaluate_clustering_external must return all 7 expected keys."""
+        """evaluate_clustering_external must return all 5 expected keys."""
         lt, lp = self._make_inputs()
         result = evaluate_clustering_external(
             lt, lp, "kmeans", "freq_baseline"
@@ -477,8 +470,6 @@ class TestEvaluateClusteringExternal:
             "feature_type",
             "ari",
             "nmi",
-            "homogeneity",
-            "completeness",
             "v_measure",
         }
         assert set(result.keys()) == expected_keys
@@ -493,20 +484,20 @@ class TestEvaluateClusteringExternal:
         assert result["feature_type"] == "freq_weighted"
 
     def test_scores_are_floats(self):
-        """All 5 metric values must be floats."""
+        """All 3 metric values must be floats."""
         lt, lp = self._make_inputs()
         result = evaluate_clustering_external(lt, lp, "som", "freq_baseline")
-        for key in ("ari", "nmi", "homogeneity", "completeness", "v_measure"):
+        for key in ("ari", "nmi", "v_measure"):
             assert isinstance(result[key], float), f"{key} is not float"
 
     def test_all_outliers_produces_nan_metrics(self):
-        """All pred == -1 → all five metrics must be nan."""
+        """All pred == -1 → all three metrics must be nan."""
         lt = make_party_labels(79)
         lp = np.full(79, -1, dtype=int)
         result = evaluate_clustering_external(
             lt, lp, "dbscan", "freq_baseline"
         )
-        for key in ("ari", "nmi", "homogeneity", "completeness", "v_measure"):
+        for key in ("ari", "nmi", "v_measure"):
             assert np.isnan(result[key]), f"{key} should be nan"
 
     def test_perfect_clustering_returns_one(self):
