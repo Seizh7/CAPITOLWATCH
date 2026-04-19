@@ -45,11 +45,6 @@ _EXTERNAL_CSV = (
     _PROJECT_ROOT / "data/visualizations/evaluation_results_external.csv"
 )
 
-# Internal metrics column names as used in the CSV
-_INTERNAL_METRICS: list[str] = [
-    "silhouette",
-]
-
 
 @st.cache_data
 def _load_evaluation_data() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -252,17 +247,11 @@ def _tab_comparison(internal_df: pd.DataFrame) -> None:
 
     st.divider()
 
-    st.subheader("Metric comparison")
-    metric = st.selectbox(
-        "Select a metric",
-        _INTERNAL_METRICS,
-        format_func=lambda m: m.replace("_", " ").title(),
-    )
     st.plotly_chart(
         barplot_metrics_plotly(
             internal_df,
-            metric_col=metric,
-            title=f"Comparison — {metric.replace('_', ' ').title()}",
+            metric_col="silhouette",
+            title="Silhouette — 6 experiments",
         ),
         use_container_width=True,
     )
