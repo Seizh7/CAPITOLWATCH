@@ -1,5 +1,5 @@
 {
-  "creation_date": "2026-03-14T16:05:55",
+  "creation_date": "2026-04-19T18:00:56",
   "n_politicians": 79,
   "features": {
     "freq_baseline": {
@@ -412,6 +412,94 @@
           32500.5,
           3000000.5,
           3000000.5,
+          428.0,
+          16.0,
+          1.0
+        ]
+      }
+    },
+    "sector_baseline": {
+      "shape": [
+        79,
+        14
+      ],
+      "feature_names": [
+        "Basic Materials",
+        "Communication Services",
+        "Consumer Cyclical",
+        "Consumer Defensive",
+        "Energy",
+        "Financial Services",
+        "Healthcare",
+        "Industrials",
+        "Real Estate",
+        "Technology",
+        "Utilities",
+        "total_assets",
+        "diversity",
+        "concentration"
+      ],
+      "stats": {
+        "mean": [
+          0.3165,
+          1.1772,
+          1.2025,
+          1.0506,
+          0.5823,
+          1.7848,
+          1.7089,
+          1.2405,
+          0.3544,
+          1.7848,
+          0.3671,
+          66.6835,
+          5.8481,
+          0.4203
+        ],
+        "std": [
+          1.1041,
+          3.2374,
+          2.9369,
+          3.3046,
+          1.7731,
+          4.1034,
+          4.0924,
+          3.2511,
+          1.4592,
+          4.4222,
+          1.2214,
+          73.4619,
+          2.7367,
+          0.1678
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          3.0,
+          1.0,
+          0.1685
+        ],
+        "max": [
+          8.0,
+          20.0,
+          17.0,
+          23.0,
+          11.0,
+          20.0,
+          20.0,
+          15.0,
+          11.0,
+          24.0,
+          7.0,
           428.0,
           16.0,
           1.0

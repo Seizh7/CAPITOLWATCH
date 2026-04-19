@@ -10,8 +10,9 @@ All matrices are saved as raw DataFrames.
 Store layout:
     data/feature_store/
     ├── metadata.json          -- creation date, shapes, feature names, stats
-    ├── freq_baseline.pkl      -- combined freq matrix + numerical features
-    ├── freq_weighted.pkl      -- combined weighted matrix + numerical features
+    ├── freq_baseline.pkl      -- subtyp frequency vectors + numerical features
+    ├── freq_weighted.pkl      -- subtype weighted vectors + numerical features
+    ├── sector_baseline.pkl    -- sector frequency vectors + numerical features
     └── politician_labels.pkl  -- id, first_name, last_name, party
 
 Main functions:
@@ -30,8 +31,10 @@ from capitolwatch.analysis.data_loader import (
 )
 from capitolwatch.analysis.feature_engineering import (
     get_sorted_subtypes,
+    get_sorted_sectors,
     create_frequency_vectors,
     create_weighted_frequency_vectors,
+    create_sector_frequency_vectors,
     compute_numerical_features,
     combine_features,
 )
@@ -41,6 +44,7 @@ FEATURE_STORE_DIR = Path("data/feature_store")
 FEATURE_FILES = {
     "freq_baseline": FEATURE_STORE_DIR / "freq_baseline.pkl",
     "freq_weighted": FEATURE_STORE_DIR / "freq_weighted.pkl",
+    "sector_baseline": FEATURE_STORE_DIR / "sector_baseline.pkl",
     "politician_labels": FEATURE_STORE_DIR / "politician_labels.pkl",
 }
 
@@ -82,12 +86,13 @@ def build_feature_store():
     Compute all feature matrices and store them to data/feature_store/.
 
     Steps:
-        1. Load politicians + assets from the database.
-        2. Build freq_baseline  (frequency vectors + numerical features).
-        3. Build freq_weighted  (weighted vectors + numerical features).
-        4. Save each matrix as a .pkl file.
-        5. Save politician_labels (id, first_name, last_name, party).
-        6. Write metadata.json.
+        1. Load politicians + assets from the database
+        2. Build freq_baseline (subtype frequency vectors + numerical features)
+        3. Build freq_weighted (subtype weighted vectors + numerical features)
+        4. Build sectorbaseline (sector frequency vectors + numerical features)
+        5. Save each matrix as a .pkl file
+        6. Save politician_labels (id, first_name, last_name, party)
+        7. Write metadata.json
 
     Returns:
         dict: metadata dict that was written to disk.
@@ -98,6 +103,7 @@ def build_feature_store():
     politicians = load_politicians()
     assets = load_assets_with_products()
     subtypes = get_sorted_subtypes(assets)
+    sectors = get_sorted_sectors(assets)
 
     # Step 2 – freq_baseline
     freq_matrix = create_frequency_vectors(politicians, assets, subtypes)
@@ -112,17 +118,26 @@ def build_feature_store():
         weighted_matrix, numerical_features
     )
 
-    # Step 4 – persist feature matrices
+    # Step 4 – sector_baseline (sector frequency counts + numerical features)
+    sector_matrix = create_sector_frequency_vectors(
+        politicians, assets, sectors
+    )
+    sector_baseline_matrix = combine_features(
+        sector_matrix, numerical_features
+    )
+
+    # Step 5 – persist feature matrices
     _save(freq_baseline_matrix, FEATURE_FILES["freq_baseline"])
     _save(freq_weighted_matrix, FEATURE_FILES["freq_weighted"])
+    _save(sector_baseline_matrix, FEATURE_FILES["sector_baseline"])
 
-    # Step 5 – persist politician labels
+    # Step 6 – persist politician labels
     politician_labels = politicians[
         ['id', 'first_name', 'last_name', 'party']
     ].copy()
     _save(politician_labels, FEATURE_FILES["politician_labels"])
 
-    # Step 6 – metadata.json
+    # Step 7 – metadata.json
     metadata = {
         "creation_date": datetime.now().isoformat(timespec="seconds"),
         "n_politicians": len(politicians),
@@ -136,6 +151,11 @@ def build_feature_store():
                 "shape": list(freq_weighted_matrix.shape),
                 "feature_names": list(freq_weighted_matrix.columns),
                 "stats": _build_stats(freq_weighted_matrix),
+            },
+            "sector_baseline": {
+                "shape": list(sector_baseline_matrix.shape),
+                "feature_names": list(sector_baseline_matrix.columns),
+                "stats": _build_stats(sector_baseline_matrix),
             },
         },
     }
@@ -194,7 +214,7 @@ if __name__ == "__main__":
     # Build the store, then verify by loading each matrix
     meta = build_feature_store()
 
-    for feature_type in ["freq_baseline", "freq_weighted", "tfidf_baseline"]:
+    for feature_type in ["freq_baseline", "freq_weighted", "sector_baseline"]:
         matrix = load_features(feature_type)
         print(f"{feature_type}: {matrix.shape}")
 
