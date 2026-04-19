@@ -550,6 +550,8 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
     with st.spinner("Running DBSCAN on sector_baseline..."):
         X, labels = _get_dbscan_results("sector_baseline")
 
+    raw_sector_matrix = load_features("sector_baseline")
+    sector_feature_names = list(raw_sector_matrix.columns)
     hover_texts = _build_hover_texts(politician_metadata, labels)
 
     # --- PCA 2D scatter ---
@@ -560,6 +562,18 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
             labels,
             hover_texts,
             title="DBSCAN + sector_baseline — PCA",
+        ),
+        use_container_width=True,
+    )
+
+    # --- Centroid heatmap ---
+    st.subheader("Centroid heatmap (mean investment count per cluster)")
+    st.plotly_chart(
+        heatmap_centroids_plotly(
+            raw_sector_matrix.to_numpy(),
+            labels,
+            sector_feature_names,
+            title="DBSCAN + sector_baseline — cluster profiles",
         ),
         use_container_width=True,
     )
