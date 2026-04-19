@@ -5,11 +5,12 @@
 """
 Streamlit dashboard
 
-Four tabs:
-    1. Comparison  : internal metrics table + barplots
-    2. Best result : DBSCAN + freq_weighted scatter / heatmap / outliers
-    3. SOM         : U-Matrix and political map
-    4. External    : ARI / NMI / V-Measure vs party labels [OPTIONAL]
+Five tabs:
+    1. Comparison     : internal metrics table + barplots
+    2. Best result    : DBSCAN + freq_weighted scatter / heatmap / outliers
+    3. SOM            : U-Matrix and political map
+    4. External       : ARI / NMI / V-Measure vs party labels
+    5. Sector analysis: DBSCAN on sector_baseline (economic sectors)
 
 Usage (from project root):
     streamlit run capitolwatch/web/app.py
@@ -525,6 +526,97 @@ def _tab_external(
     )
 
 
+def _tab_sector(politician_metadata: pd.DataFrame) -> None:
+    """
+    Render the "Sector analysis" tab.
+
+    Runs DBSCAN on sector_baseline (11 economic sectors + 3 numeric features)
+    and displays:
+      - Interactive PCA 2D scatter (hover = name + party + cluster)
+      - Table of sector outliers (label == -1)
+      - Explanatory note comparing sector vs subtype analysis
+
+    Args:
+        politician_metadata (pd.DataFrame): Politician names and parties.
+    """
+    st.header("Sector analysis — DBSCAN on economic sectors")
+    st.caption(
+        "Feature set: sector_baseline — 11 economic sectors (Technology, "
+        "Finance, Healthcare…) + 3 numeric features. "
+        "82.6% of assets have no sector (\"Uncategorized\"), which is "
+        "excluded from the feature dimensions to preserve signal."
+    )
+
+    with st.spinner("Running DBSCAN on sector_baseline..."):
+        X, labels = _get_dbscan_results("sector_baseline")
+
+    hover_texts = _build_hover_texts(politician_metadata, labels)
+
+    # --- PCA 2D scatter ---
+    st.subheader("PCA 2D — sector clusters")
+    st.plotly_chart(
+        scatter_pca_plotly(
+            X,
+            labels,
+            hover_texts,
+            title="DBSCAN + sector_baseline — PCA",
+        ),
+        use_container_width=True,
+    )
+
+    # --- Outlier table ---
+    st.subheader("Outliers identified by DBSCAN (sector view)")
+    outlier_mask = labels == -1
+    outlier_df = (
+        politician_metadata[outlier_mask.tolist()]
+        .copy()
+        .reset_index(drop=True)[["first_name", "last_name", "party"]]
+    )
+    outlier_df.index += 1
+
+    if outlier_df.empty:
+        st.info("No outliers detected with the selected parameters.")
+    else:
+        st.dataframe(outlier_df, use_container_width=True)
+        party_counts = outlier_df["party"].value_counts()
+        rep = party_counts.get("Republican", 0)
+        dem = party_counts.get("Democratic", 0)
+        ind = party_counts.get("Independent", 0)
+        st.info(
+            f"**{len(outlier_df)} sector outlier(s)** — "
+            f"{rep} Republicans, {dem} Democrats"
+            + (f", {ind} Independents" if ind else "") + ". "
+            "These politicians have sector exposure patterns that are too "
+            "sparse or atypical to form dense neighbourhoods in cosine "
+            "space."
+        )
+
+    st.divider()
+
+    # --- Explanatory note ---
+    st.subheader("Sector analysis vs subtype analysis")
+    st.markdown(
+        "**Granularity difference** — The main analysis uses `subtype` "
+        "(instrument type: Mutual Fund, Stock, ETF, Bond…), which captures "
+        "*how* politicians invest. "
+        "This tab uses `sector` (economic sector: Technology, Finance, "
+        "Healthcare…), which captures *where* they invest.\n\n"
+        "**Coverage caveat** — Only 17.4% of assets have a sector tag "
+        "(11 sectors, sourced from product metadata). "
+        "The remaining 82.6% fall under \"Uncategorized\", which is excluded "
+        "from the feature dimensions to avoid a dominant zero-signal column. "
+        "This means sector vectors are significantly sparser than subtype "
+        "vectors (35 subtypes, ~98% coverage), and cluster structure may be "
+        "less stable.\n\n"
+        "**Interpretation** — Clusters here reflect *sector specialisation*: "
+        "politicians who concentrate their tagged assets in one or two "
+        "sectors (e.g., Technology or Finance) separate from those with "
+        "diversified or no tagged holdings. "
+        "Use this tab as a complementary lens, not a replacement for the "
+        "subtype-based analysis."
+    )
+
+
 # --- Application entry point ---
 
 
@@ -547,12 +639,13 @@ def main() -> None:
     internal_df, external_df = _load_evaluation_data()
     politician_metadata = _load_politician_metadata()
 
-    tab1, tab2, tab3, tab4 = st.tabs(
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "Comparison",
             "Best result — DBSCAN",
             "SOM",
             "External metrics",
+            "Sector analysis",
         ]
     )
 
@@ -567,6 +660,9 @@ def main() -> None:
 
     with tab4:
         _tab_external(external_df, internal_df)
+
+    with tab5:
+        _tab_sector(politician_metadata)
 
 
 if __name__ == "__main__":
