@@ -35,7 +35,8 @@ def test_extract_assets_basic():
     assert assets[0]["index"] == "1"
     assert assets[0]["parent_index"] is None
     assert assets[0]["name"] == "Arp & Hammond Hardware Company"
-    assert assets[0]["type"] == "Corporate SecuritiesNon-Public Stock"
+    assert assets[0]["type"] == "Corporate Securities"
+    assert assets[0]["subtype"] == "Non-Public Stock"
     assert assets[0]["owner"] == "Self"
     assert assets[0]["value"] == "$1,000,001 - $5,000,000"
     assert assets[0]["income_type"] == "Dividends"
@@ -46,7 +47,8 @@ def test_extract_assets_basic():
     assert assets[5]["index"] == "4.1"
     assert assets[5]["parent_index"] == "4"
     assert assets[5]["name"] == "Sweetgrass"
-    assert assets[5]["type"] == "Real EstateResidential"
+    assert assets[5]["type"] == "Real Estate"
+    assert assets[5]["subtype"] == "Residential"
     assert assets[5]["owner"] == "Self"
     assert assets[5]["value"] == "$1,000,001 - $5,000,000"
     assert assets[5]["income_type"] is None
