@@ -4,11 +4,4 @@
 
 """
 Analysis module for investment profile clustering
-
-This package contains all tools necessary for ML analysis:
-    - Data loading
-    - Feature engineering
-    - Clustering algorithms
-    - Evaluation metrics
-    - Visualizations
 """

@@ -261,7 +261,7 @@ def run_all_evaluations(
     For each (algo, feature_type) pair:
       1. Load and normalize feature matrix.
       2. Fit the algorithm with its optimal parameters.
-      3. Compute silhouette, Davies-Bouldin, and Calinski-Harabasz.
+      3. Compute the silhouette score.
       4. Collect results into a sorted comparison table.
       5. Export the table to CSV.
 
@@ -312,13 +312,11 @@ def print_comparison_table(df: pd.DataFrame) -> None:
         "n_clusters": "Clusters",
         "n_outliers": "Outliers",
         "silhouette": "Silhouette",
-        "davies_bouldin": "Davies-Bouldin",
-        "calinski_harabasz": "Calinski-Harabasz",
     }
     display = df.rename(columns=col_fmt)
 
     # format float columns to 4 decimal places
-    for col in ["Silhouette", "Davies-Bouldin", "Calinski-Harabasz"]:
+    for col in ["Silhouette"]:
         display[col] = display[col].apply(
             lambda v: f"{v:.4f}" if not pd.isna(v) else "nan"
         )
