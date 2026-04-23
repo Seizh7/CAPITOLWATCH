@@ -9,7 +9,6 @@ All matrices are saved as raw DataFrames.
 
 Store layout:
     data/feature_store/
-    ├── metadata.json          -- creation date, shapes, feature names, stats
     ├── freq_baseline.pkl      -- subtyp frequency vectors + numerical features
     ├── freq_weighted.pkl      -- subtype weighted vectors + numerical features
     ├── sector_baseline.pkl    -- sector frequency vectors + numerical features
@@ -18,12 +17,9 @@ Store layout:
 Main functions:
     - build_feature_store() : compute all matrices and persist them
     - load_features(feature_type) : load one matrix from disk
-    - load_metadata() : read metadata.json
 """
 
 import joblib
-import json
-from datetime import datetime
 from pathlib import Path
 
 from capitolwatch.analysis.data_loader import (
@@ -48,8 +44,6 @@ FEATURE_FILES = {
     "politician_labels": FEATURE_STORE_DIR / "politician_labels.pkl",
 }
 
-METADATA_FILE = FEATURE_STORE_DIR / "metadata.json"
-
 
 def _save(obj, path):
     """
@@ -60,25 +54,6 @@ def _save(obj, path):
         path (Path): Destination file path.
     """
     joblib.dump(obj, path)
-
-
-def _build_stats(matrix):
-    """
-    Compute per-column descriptive statistics for metadata.
-
-    Args:
-        matrix (pd.DataFrame): Feature matrix.
-
-    Returns:
-        dict: {"mean": [...], "std": [...], "min": [...], "max": [...]}
-              Each list contains one float per column, rounded to 4 decimals.
-    """
-    return {
-        "mean": matrix.mean().round(4).tolist(),
-        "std": matrix.std().round(4).tolist(),
-        "min": matrix.min().round(4).tolist(),
-        "max": matrix.max().round(4).tolist(),
-    }
 
 
 def build_feature_store():
@@ -92,10 +67,6 @@ def build_feature_store():
         4. Build sectorbaseline (sector frequency vectors + numerical features)
         5. Save each matrix as a .pkl file
         6. Save politician_labels (id, first_name, last_name, party)
-        7. Write metadata.json
-
-    Returns:
-        dict: metadata dict that was written to disk.
     """
     FEATURE_STORE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -137,34 +108,6 @@ def build_feature_store():
     ].copy()
     _save(politician_labels, FEATURE_FILES["politician_labels"])
 
-    # Step 7 – metadata.json
-    metadata = {
-        "creation_date": datetime.now().isoformat(timespec="seconds"),
-        "n_politicians": len(politicians),
-        "features": {
-            "freq_baseline": {
-                "shape": list(freq_baseline_matrix.shape),
-                "feature_names": list(freq_baseline_matrix.columns),
-                "stats": _build_stats(freq_baseline_matrix),
-            },
-            "freq_weighted": {
-                "shape": list(freq_weighted_matrix.shape),
-                "feature_names": list(freq_weighted_matrix.columns),
-                "stats": _build_stats(freq_weighted_matrix),
-            },
-            "sector_baseline": {
-                "shape": list(sector_baseline_matrix.shape),
-                "feature_names": list(sector_baseline_matrix.columns),
-                "stats": _build_stats(sector_baseline_matrix),
-            },
-        },
-    }
-
-    with open(METADATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, indent=2)
-
-    return metadata
-
 
 def load_features(feature_type):
     """
@@ -193,26 +136,9 @@ def load_features(feature_type):
     return joblib.load(path)
 
 
-def load_metadata():
-    """
-    Read the feature store metadata.
-
-    Returns:
-        dict: Metadata as a Python dictionary.
-    """
-    if not METADATA_FILE.exists():
-        raise FileNotFoundError(
-            f"Metadata not found at {METADATA_FILE}. "
-            "Run build_feature_store() first."
-        )
-
-    with open(METADATA_FILE, encoding="utf-8") as f:
-        return json.load(f)
-
-
 if __name__ == "__main__":
     # Build the store, then verify by loading each matrix
-    meta = build_feature_store()
+    build_feature_store()
 
     for feature_type in ["freq_baseline", "freq_weighted", "sector_baseline"]:
         matrix = load_features(feature_type)

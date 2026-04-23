@@ -41,11 +41,8 @@ def features() -> None:
     from capitolwatch.analysis.feature_store import build_feature_store
 
     try:
-        metadata = build_feature_store()
-        n = metadata.get("n_politicians", "?")
-        typer.secho(
-            f"Feature store built — {n} politicians", fg=typer.colors.GREEN
-        )
+        build_feature_store()
+        typer.secho("Feature store built", fg=typer.colors.GREEN)
     except Exception as exc:
         typer.secho(
             f"Feature store build failed: {exc}", fg=typer.colors.RED, err=True
