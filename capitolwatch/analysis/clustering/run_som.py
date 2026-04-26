@@ -74,7 +74,7 @@ def _train_som(
 
     # save the bare U-Matrix (no overlay) to inspect cluster boundaries
     clusterer.plot_umatrix(
-        save_path=f"data/visualizations/som_umatrix_{feature_type}.png",
+        save_path=f"data/figures/som_umatrix_{feature_type}.png",
     )
     return clusterer
 
@@ -103,7 +103,7 @@ def _extract_and_visualize(
         matrix=X,
         politician_labels=politician_labels,
         save_path=(
-            f"data/visualizations/som_umatrix_overlay_{feature_type}.png"
+            f"data/figures/som_umatrix_overlay_{feature_type}.png"
         ),
     )
 
@@ -111,7 +111,7 @@ def _extract_and_visualize(
     clusterer.plot_som_map(
         X,
         politician_labels=politician_labels,
-        save_path=f"data/visualizations/som_map_{feature_type}.png",
+        save_path=f"data/figures/som_map_{feature_type}.png",
     )
 
 

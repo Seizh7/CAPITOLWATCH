@@ -41,9 +41,9 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_PROJECT_ROOT))
 
 
-_INTERNAL_CSV = _PROJECT_ROOT / "data/visualizations/evaluation_results.csv"
+_INTERNAL_CSV = _PROJECT_ROOT / "data/outputs/evaluation_results.csv"
 _EXTERNAL_CSV = (
-    _PROJECT_ROOT / "data/visualizations/evaluation_results_external.csv"
+    _PROJECT_ROOT / "data/outputs/evaluation_results_external.csv"
 )
 
 

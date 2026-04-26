@@ -56,11 +56,11 @@ def _find_and_plot_optimal_k(
     k_values, inertias, sil_scores = clusterer.find_optimal_k(X)
     clusterer.plot_elbow(
         k_values, inertias,
-        save_path=f"data/visualizations/kmeans_elbow_{feature_type}.png",
+        save_path=f"data/figures/kmeans_elbow_{feature_type}.png",
     )
     clusterer.plot_silhouette(
         k_values, sil_scores,
-        save_path=f"data/visualizations/kmeans_silhouette_{feature_type}.png",
+        save_path=f"data/figures/kmeans_silhouette_{feature_type}.png",
     )
     best_k = k_values[sil_scores.index(max(sil_scores))]
     return best_k, round(max(sil_scores), 4)

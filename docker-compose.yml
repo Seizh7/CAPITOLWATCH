@@ -14,8 +14,7 @@ services:
     volumes:
       # Mount only the files the Streamlit dashboard actually reads at runtime
       - ./data/capitolwatch.db:/app/data/capitolwatch.db:ro
-      - ./data/feature_store:/app/data/feature_store:ro
-      - ./data/visualizations:/app/data/visualizations:ro
+      - ./data/outputs:/app/data/outputs:ro
     environment:
       APP_ENV: production
     restart: unless-stopped

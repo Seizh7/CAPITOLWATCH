@@ -5,15 +5,10 @@
 
 # Ignore all data by default
 data/*
-
-# Keep the gitkeep marker
-!data/.gitkeep
-
-# Pre-computed datas required to run the application without the datapipeline
+# Pre-computed data required to run the application without the datapipeline
 !data/capitolwatch.db
 !data/manual_overrides.json
-!data/feature_store/
-!data/visualizations/
+!data/outputs/
 
 .env
 .github/copilot-instructions.md

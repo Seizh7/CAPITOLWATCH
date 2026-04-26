@@ -24,7 +24,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.decomposition import PCA
 
-OUTPUT_DIR = Path("data/visualizations")
+OUTPUT_DIR = Path("data/figures")
 
 CLUSTER_PALETTE = "tab10"
 OUTLIER_COLOR = "#AAAAAA"

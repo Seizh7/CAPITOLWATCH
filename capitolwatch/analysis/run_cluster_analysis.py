@@ -6,7 +6,7 @@
 Run cluster analysis for all 6 experiments and generate Markdown reports.
 
 Uses the same parameters as the evaluation step, so results are consistent.
-Saves one report per experiment to data/visualizations/cluster_profiles/.
+Saves one report per experiment to data/figures/cluster_profiles/.
 
 Usage:
     python -m capitolwatch.analysis.run_cluster_analysis
@@ -25,7 +25,7 @@ from capitolwatch.analysis.run_evaluation import (
 
 
 def run_all_analyses(
-    output_dir: str = "data/visualizations/cluster_profiles",
+    output_dir: str = "data/figures/cluster_profiles",
 ) -> dict:
     """
     Analyze clusters for all 6 experiments.
@@ -35,7 +35,7 @@ def run_all_analyses(
 
     Args:
         output_dir (str): Where to save the reports (default:
-            data/visualizations/cluster_profiles/).
+            data/figures/cluster_profiles/).
 
     Returns:
         dict: Results keyed by experiment name, e.g. "kmeans/freq_baseline".

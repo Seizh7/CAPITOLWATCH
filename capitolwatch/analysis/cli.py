@@ -22,7 +22,8 @@ app = typer.Typer(
     add_completion=False,
 )
 
-OUTPUT_DIR = Path("data/visualizations")
+OUTPUT_DIR = Path("data/outputs")
+FIGURES_DIR = Path("data/figures")
 
 
 @app.command()
@@ -31,7 +32,7 @@ def features() -> None:
     Build the feature store from the database.
 
     Computes freq_baseline, freq_weighted, and sector_baseline matrices,
-    then saves them to data/feature_store/.
+    then saves them to data/outputs/.
 
     Example:
         python -m capitolwatch.analysis features
@@ -56,7 +57,7 @@ def evaluate() -> None:
     Evaluate all 6 clustering experiments (internal + external metrics).
 
     Fits K-Means, DBSCAN, and SOM and computes internal and external metrics.
-    Results are exported to data/visualizations/.
+    Results are exported to data/outputs/ (CSV) and data/figures/ (PNG).
 
     Example:
         python -m capitolwatch.analysis evaluate
@@ -86,7 +87,7 @@ def evaluate() -> None:
     try:
         run_external_evaluations(
             output_path=eval_ext_csv,
-            confusion_matrix_dir=str(OUTPUT_DIR),
+            confusion_matrix_dir=str(FIGURES_DIR),
         )
         typer.secho(
             f"Results saved to: {eval_ext_csv}",
@@ -105,7 +106,7 @@ def analyze() -> None:
     Generate per-cluster narrative reports (Markdown).
 
     For each of the 6 experiments, describes the investment profile of
-    every cluster. Reports are saved to data/visualizations/cluster_profiles/.
+    every cluster. Reports are saved to data/figures/cluster_profiles/.
 
     Example:
         python -m capitolwatch.analysis analyze
@@ -114,7 +115,7 @@ def analyze() -> None:
 
     from capitolwatch.analysis.run_cluster_analysis import run_all_analyses
 
-    profiles_dir = str(OUTPUT_DIR / "cluster_profiles")
+    profiles_dir = str(FIGURES_DIR / "cluster_profiles")
     try:
         profiles = run_all_analyses(output_dir=profiles_dir)
         typer.secho(
@@ -149,11 +150,11 @@ def visualize() -> None:
 
     typer.secho("\nGenerating visualizations", fg=typer.colors.CYAN, bold=True)
     try:
-        run_simple_plots(output_dir=OUTPUT_DIR)
-        run_metrics_barplots(output_dir=OUTPUT_DIR)
-        run_pca_plots(output_dir=OUTPUT_DIR)
+        run_simple_plots(output_dir=FIGURES_DIR)
+        run_metrics_barplots(output_dir=FIGURES_DIR)
+        run_pca_plots(output_dir=FIGURES_DIR)
         typer.secho(
-            f"All plots saved to: {OUTPUT_DIR.resolve()}",
+            f"All plots saved to: {FIGURES_DIR.resolve()}",
             fg=typer.colors.GREEN
         )
     except Exception as exc:
@@ -210,7 +211,7 @@ def full_pipeline() -> None:
         run_all_evaluations(output_path=eval_csv)
         run_external_evaluations(
             output_path=eval_ext_csv,
-            confusion_matrix_dir=str(OUTPUT_DIR),
+            confusion_matrix_dir=str(FIGURES_DIR),
         )
         typer.secho("Evaluation done", fg=typer.colors.GREEN)
     except Exception as exc:
@@ -229,7 +230,7 @@ def full_pipeline() -> None:
     )
     from capitolwatch.analysis.run_cluster_analysis import run_all_analyses
     try:
-        run_all_analyses(output_dir=str(OUTPUT_DIR / "cluster_profiles"))
+        run_all_analyses(output_dir=str(FIGURES_DIR / "cluster_profiles"))
         typer.secho("Cluster analysis done", fg=typer.colors.GREEN)
     except Exception as exc:
         typer.secho(
@@ -251,9 +252,9 @@ def full_pipeline() -> None:
         run_pca_plots,
     )
     try:
-        run_simple_plots(output_dir=OUTPUT_DIR)
-        run_metrics_barplots(output_dir=OUTPUT_DIR)
-        run_pca_plots(output_dir=OUTPUT_DIR)
+        run_simple_plots(output_dir=FIGURES_DIR)
+        run_metrics_barplots(output_dir=FIGURES_DIR)
+        run_pca_plots(output_dir=FIGURES_DIR)
         typer.secho("Visualizations done", fg=typer.colors.GREEN)
     except Exception as exc:
         typer.secho(

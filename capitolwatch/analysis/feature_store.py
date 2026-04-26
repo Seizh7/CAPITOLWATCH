@@ -8,7 +8,7 @@ Feature store: serialization and loading of computed feature matrices.
 All matrices are saved as raw DataFrames.
 
 Store layout:
-    data/feature_store/
+    data/outputs/
     ├── freq_baseline.pkl      -- subtyp frequency vectors + numerical features
     ├── freq_weighted.pkl      -- subtype weighted vectors + numerical features
     ├── sector_baseline.pkl    -- sector frequency vectors + numerical features
@@ -35,7 +35,7 @@ from capitolwatch.analysis.feature_engineering import (
     combine_features,
 )
 
-FEATURE_STORE_DIR = Path("data/feature_store")
+FEATURE_STORE_DIR = Path("data/outputs")
 
 FEATURE_FILES = {
     "freq_baseline": FEATURE_STORE_DIR / "freq_baseline.pkl",
@@ -58,7 +58,7 @@ def _save(obj, path):
 
 def build_feature_store():
     """
-    Compute all feature matrices and store them to data/feature_store/.
+    Compute all feature matrices and store them to data/outputs/.
 
     Steps:
         1. Load politicians + assets from the database

@@ -245,7 +245,7 @@ class DBSCANClusterer(BaseClusterer):
         results: list,
         eps_values: list,
         min_samples_values: list,
-        save_path: str = "data/visualizations/dbscan_grid_search.png",
+        save_path: str = "data/figures/dbscan_grid_search.png",
     ) -> None:
         """
         Plot a heatmap of silhouette scores over the (eps, min_samples) grid.
@@ -291,7 +291,7 @@ class DBSCANClusterer(BaseClusterer):
         self,
         matrix: np.ndarray,
         politician_labels=None,
-        save_path: str = "data/visualizations/dbscan_clusters_pca.png",
+        save_path: str = "data/figures/dbscan_clusters_pca.png",
     ) -> None:
         """
         Project feature matrix to 2D via PCA and plot clusters.

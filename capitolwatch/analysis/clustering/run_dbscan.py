@@ -61,7 +61,7 @@ def _run_grid_search(
     grid_results = clusterer.grid_search(X, eps_values, min_samples_values)
 
     # save the silhouette heatmap for inspection
-    save_path = f"data/visualizations/dbscan_grid_{feature_type}.png"
+    save_path = f"data/figures/dbscan_grid_{feature_type}.png"
     clusterer.plot_grid_search(
         grid_results,
         eps_values=eps_values,
@@ -108,7 +108,7 @@ def _fit_best(
     clusterer.plot_clusters_pca(
         X,
         politician_labels=politician_labels,
-        save_path=f"data/visualizations/dbscan_pca_{feature_type}.png",
+        save_path=f"data/figures/dbscan_pca_{feature_type}.png",
     )
 
     # collect politicians assigned noise label -1

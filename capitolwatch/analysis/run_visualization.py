@@ -5,7 +5,7 @@
 """
 Visualization pipeline for all 6 clustering experiments.
 
-Generates static PNG files and saves them to data/visualizations/.
+Generates static PNG files and saves them to data/figures/.
 
 Plots produced per experiment (6 experiments x 3 plots = 18 files):
     - heatmap_{algo}_{feature_type}.png  : mean feature value per cluster
@@ -32,7 +32,7 @@ from capitolwatch.analysis.visualization import (
     plot_metrics_barplot,
 )
 
-OUTPUT_DIR = Path("data/visualizations")
+OUTPUT_DIR = Path("data/figures")
 INTERNAL_METRICS = ["silhouette"]
 
 

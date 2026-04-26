@@ -24,7 +24,7 @@ import pandas as pd
 
 
 # Default directory for reports
-CLUSTER_PROFILES_DIR = Path("data/visualizations/cluster_profiles")
+CLUSTER_PROFILES_DIR = Path("data/figures/cluster_profiles")
 
 
 class ClusterProfile:
@@ -303,7 +303,7 @@ def save_cluster_report(
         algo_name (str): Algorithm name for the filename.
         feature_type (str): Feature type for the filename.
         output_dir (Path, optional): Where to save. Defaults to
-            data/visualizations/cluster_profiles/.
+            data/figures/cluster_profiles/.
 
     Returns:
         Path: The file that was written.
@@ -342,7 +342,7 @@ def run_analysis(
         algo_name (str): Algorithm name, e.g. "kmeans".
         feature_type (str): Feature type, e.g. "freq_weighted".
         output_dir (Path, optional): Where to save the report (default:
-            data/visualizations/cluster_profiles/).
+            data/figures/cluster_profiles/).
         top_n_subtypes (int): How many investment types to show (default: 5).
 
     Returns:

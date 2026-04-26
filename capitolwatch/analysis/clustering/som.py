@@ -196,7 +196,7 @@ class SOMClusterer(BaseClusterer):
         self,
         matrix: np.ndarray = None,
         politician_labels=None,
-        save_path: str = "data/visualizations/som_umatrix.png",
+        save_path: str = "data/figures/som_umatrix.png",
     ) -> None:
         """
         Plot the U-Matrix as a heatmap and optionally overlay each
@@ -260,7 +260,7 @@ class SOMClusterer(BaseClusterer):
         self,
         matrix: np.ndarray,
         politician_labels=None,
-        save_path: str = "data/visualizations/som_map.png",
+        save_path: str = "data/figures/som_map.png",
     ) -> None:
         """
         Visualize the SOM grid: each occupied cell is colored by cluster,

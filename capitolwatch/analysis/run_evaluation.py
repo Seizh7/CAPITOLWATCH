@@ -253,7 +253,7 @@ def _build_experiment_configs() -> list:
 
 
 def run_all_evaluations(
-    output_path: str = "data/visualizations/evaluation_results.csv",
+    output_path: str = "data/outputs/evaluation_results.csv",
 ) -> pd.DataFrame:
     """
     Run all 6 experiments, compute internal metrics, and export results.
@@ -341,8 +341,8 @@ def _load_party_labels() -> np.ndarray:
 
 
 def run_external_evaluations(
-    output_path: str = "data/visualizations/evaluation_results_external.csv",
-    confusion_matrix_dir: str = "data/visualizations",
+    output_path: str = "data/outputs/evaluation_results_external.csv",
+    confusion_matrix_dir: str = "data/figures",
 ) -> pd.DataFrame:
     """
     Run external metrics (ARI, NMI, V-Measure) for all 6 experiments.

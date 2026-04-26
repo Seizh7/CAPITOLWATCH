@@ -125,7 +125,7 @@ class KMeansClusterer(BaseClusterer):
         self,
         k_values: list,
         inertias: list,
-        save_path: str = "data/visualizations/kmeans_elbow.png",
+        save_path: str = "data/figures/kmeans_elbow.png",
     ) -> None:
         """
         Plot inertia vs K (elbow curve) and save to disk.
@@ -151,7 +151,7 @@ class KMeansClusterer(BaseClusterer):
         self,
         k_values: list,
         silhouette_scores: list,
-        save_path: str = "data/visualizations/kmeans_silhouette.png",
+        save_path: str = "data/figures/kmeans_silhouette.png",
     ) -> None:
         """
         Plot silhouette score vs K and save to disk.
