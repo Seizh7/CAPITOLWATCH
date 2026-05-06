@@ -10,16 +10,16 @@ from capitolwatch.analysis.data_loader import (
 
 def get_sorted_subtypes(assets_df):
     """
-    Extract a sorted list of all unique subtypes.
+    Extract a sorted list of known subtypes, excluding 'Uncategorized'.
 
     Args:
         assets_df (pd.DataFrame): Assets DataFrame with 'subtype' column.
 
     Returns:
-        list[str]: Sorted list of unique subtype names.
+        list[str]: Sorted list of known subtype names
     """
     subtypes = assets_df['subtype'].dropna().unique()
-    return sorted(subtypes)
+    return sorted(s for s in subtypes if s != 'Uncategorized')
 
 
 def get_sorted_sectors(assets_df):
@@ -154,16 +154,15 @@ def create_sector_frequency_vectors(politicians_df, assets_df, sectors):
 
 def compute_numerical_features(freq_matrix):
     """
-    Compute 3 summary features per politician:
+    Compute 2 summary features per politician:
         - total_assets     : total number of assets
         - diversity        : number of distinct subtypes used
-        - concentration    : Herfindahl index (sum of squared proportions)
 
     Args:
         freq_matrix (pd.DataFrame): Frequency matrix
 
     Returns:
-        pd.DataFrame: Shape (n_politicians, 3), indexed by politician_id
+        pd.DataFrame: Shape (n_politicians, 2), indexed by politician_id
     """
     # Sum of each row in freq_matrix
     total_assets = freq_matrix.sum(axis=1)
@@ -171,16 +170,9 @@ def compute_numerical_features(freq_matrix):
     # Count of non-zero values per row
     diversity = (freq_matrix > 0).sum(axis=1)
 
-    # Herfindahl index: sum of squared proportions
-    # Replace 0 total with 1 to avoid division by zero
-    safe_total = total_assets.replace(0, 1)
-    proportions = freq_matrix.div(safe_total, axis=0)
-    concentration = (proportions ** 2).sum(axis=1)
-
     numerical_features = pd.DataFrame({
         'total_assets': total_assets,
         'diversity': diversity,
-        'concentration': concentration
     }, index=freq_matrix.index)
 
     return numerical_features

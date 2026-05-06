@@ -77,25 +77,29 @@ def run_simple_plots(output_dir: Path = OUTPUT_DIR) -> None:
         )
 
 
-def run_metrics_barplots(output_dir: Path = OUTPUT_DIR) -> None:
+def run_metrics_barplots(
+    csv_dir: Path = Path("data/outputs"),
+    figures_dir: Path = OUTPUT_DIR,
+) -> None:
     """
     Generate one comparison barplot per internal metric.
 
-    Reads evaluation_results.csv produced by run_evaluation.py.
+    Reads evaluation_results.csv from csv_dir and saves PNGs to figures_dir.
 
     Args:
-        output_dir (Path): Directory containing the CSV and where PNGs are
-            saved.
+        csv_dir (Path): Directory containing evaluation_results.csv.
+        figures_dir (Path): Directory where PNG files are saved.
 
     Raises:
         FileNotFoundError: If evaluation_results.csv does not exist yet.
     """
-    results_csv = output_dir / "evaluation_results.csv"
+    results_csv = csv_dir / "evaluation_results.csv"
     if not results_csv.exists():
         raise FileNotFoundError(
             f"{results_csv} not found. Run run_evaluation.py first."
         )
 
+    figures_dir.mkdir(parents=True, exist_ok=True)
     results_df = pd.read_csv(results_csv)
     # Build a readable experiment label for the X axis.
     results_df["experiment"] = (
@@ -108,7 +112,7 @@ def run_metrics_barplots(output_dir: Path = OUTPUT_DIR) -> None:
             results_df,
             metric_col=metric,
             title=f"Comparison — {metric.replace('_', ' ').title()}",
-            output_path=output_dir / f"metrics_{metric}.png",
+            output_path=figures_dir / f"metrics_{metric}.png",
         )
 
 

@@ -131,17 +131,6 @@ class TestComputeNumericalFeatures:
         assert features.loc['P1', 'diversity'] == 2
         assert features.loc['P2', 'diversity'] == 1
 
-    def test_concentration_fully_concentrated(self):
-        """A politician with all assets in one subtype must have H = 1.0."""
-        features = compute_numerical_features(self.freq_matrix)
-        assert features.loc['P2', 'concentration'] == pytest.approx(1.0)
-
-    def test_concentration_range(self):
-        """Herfindahl index must always be in [0, 1]."""
-        features = compute_numerical_features(self.freq_matrix)
-        assert (features['concentration'] >= 0).all()
-        assert (features['concentration'] <= 1.0 + 1e-9).all()
-
     def test_no_division_by_zero(self):
         """A politician with 0 total assets must not raise an exception."""
         zero_matrix = pd.DataFrame(
@@ -153,23 +142,23 @@ class TestComputeNumericalFeatures:
         assert not features.isnull().any().any()
 
     def test_output_columns(self):
-        """Output must have exactly the 3 expected columns."""
+        """Output must have exactly the 2 expected columns."""
         features = compute_numerical_features(self.freq_matrix)
         assert set(features.columns) == {
-            'total_assets', 'diversity', 'concentration'
+            'total_assets', 'diversity'
         }
 
 
 class TestCombineFeatures:
 
     def test_shape(self):
-        """Combined matrix must have n_subtypes + 3 columns."""
+        """Combined matrix must have n_subtypes + 2 columns."""
         freq_matrix = create_frequency_vectors(
             POLITICIANS_DF, ASSETS_DF, SUBTYPES
         )
         numerical_features = compute_numerical_features(freq_matrix)
         combined = combine_features(freq_matrix, numerical_features)
-        assert combined.shape == (len(POLITICIANS_DF), len(SUBTYPES) + 3)
+        assert combined.shape == (len(POLITICIANS_DF), len(SUBTYPES) + 2)
 
     def test_no_nan_values(self):
         """Combined matrix must not contain any NaN."""

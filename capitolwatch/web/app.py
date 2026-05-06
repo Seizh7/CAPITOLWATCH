@@ -235,15 +235,14 @@ def _tab_comparison(internal_df: pd.DataFrame) -> None:
     )
 
     st.info(
-        "**K-Means silhouette artefact** — K-Means scores (0.76 / 0.68) are "
+        "**K-Means silhouette artefact** — K-Means scores (0.77 / 0.70) are "
         "artificially inflated: the algorithm always selects K=2 and isolates "
         "Rick Scott (455 assets, maximum in the dataset) as a singleton "
         "cluster. "
         "A single-point cluster has silhouette ≈ 1 by definition, which makes "
         "the global score misleadingly high. "
         "DBSCAN correctly assigns him label -1 (outlier) without "
-        "polluting the "
-        "other clusters."
+        "polluting the other clusters."
     )
 
     st.divider()
@@ -271,8 +270,8 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     st.header("Best result — DBSCAN + freq_weighted")
     st.caption(
         "Best configuration: cosine metric, eps=0.5, min_samples=3. "
-        "3 clusters, 15 outliers (19% noise ratio). "
-        "Silhouette: 0.4857."
+        "3 clusters, 13 outliers (16% noise ratio). "
+        "Silhouette: 0.5795."
     )
 
     with st.spinner("Running DBSCAN (cosine grid search)..."):
@@ -311,7 +310,7 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     outlier_df.index += 1
     st.dataframe(outlier_df, use_container_width=True)
 
-    # Party breakdown of the 15 outliers
+    # Party breakdown of the 13 outliers
     if not outlier_df.empty:
         party_counts = outlier_df["party"].value_counts()
         rep = party_counts.get("Republican", 0)
@@ -320,14 +319,14 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
         st.info(
             f"**Outlier profile** — {rep} Republicans, {dem} Democrats"
             + (f", {ind} Independents" if ind else "") + ". "
-            "These 15 politicians are not outliers because of their party "
+            "These 13 politicians are not outliers because of their party "
             "affiliation, but because of the **scale and composition** of "
             "their portfolios: they invest in niche asset classes "
             "(Municipal Securities, LLCs, alternative funds) that are "
             "statistically rare in the dataset. "
             "Rick Scott stands out with 455 assets — 6x the average — "
-            "and is the only politician unanimously flagged by all four "
-            "methods (K-Means, DBSCAN, SOM x2)."
+            "and is the only politician unanimously flagged by all three "
+            "algorithms (K-Means, DBSCAN, SOM)."
         )
 
 
@@ -505,20 +504,20 @@ def _tab_external(
     st.subheader("Scientific interpretation")
     st.markdown(
         "**Clusters are independent of political party affiliation.** "
-        "All ARI values are close to 0 (from -0.029 to +0.006), meaning "
+        "All ARI values are close to 0 (from -0.036 to +0.012), meaning "
         "cluster assignments are no better than random at predicting party "
         "membership. NMI and V-Measure confirm this: the highest NMI is "
-        "0.061 (DBSCAN + freq_weighted), indicating less than 6% of shared "
+        "0.097 (DBSCAN + freq_weighted), indicating less than 10% of shared "
         "information between clusters and parties.\n\n"
         "**This is a scientifically meaningful result, not a failure.** "
         "It shows that investment behaviour cuts across party lines: "
         "Republicans and Democrats alike hold mutual funds, stocks, and ETFs "
         "in similar proportions. The clusters instead reflect "
-        "**portfolio scale and complexity** — how many assets a senator "
-        "holds and how specialised their investments are — rather than "
+        "**portfolio scale and asset type** — the kind of financial "
+        "instruments a senator holds and their monetary weight — rather than "
         "ideological differences.\n\n"
         "**Outliers reinforce this conclusion.** "
-        "The 15 DBSCAN outliers include both Republicans and Democrats, "
+        "The 13 DBSCAN outliers include both Republicans and Democrats, "
         "united by unusually large or atypical portfolios, not by party. "
         "Rick Scott (Republican, 455 assets) is the most extreme case, but "
         "Mark R. Warner (Democrat) and Ron Wyden (Democrat) also appear, "
@@ -620,7 +619,7 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
         "The remaining 82.6% fall under \"Uncategorized\", which is excluded "
         "from the feature dimensions to avoid a dominant zero-signal column. "
         "This means sector vectors are significantly sparser than subtype "
-        "vectors (35 subtypes, ~98% coverage), and cluster structure may be "
+        "vectors (34 subtypes, ~98% coverage), and cluster structure may be "
         "less stable.\n\n"
         "**Interpretation** — Clusters here reflect *sector specialisation*: "
         "politicians who concentrate their tagged assets in one or two "
@@ -646,7 +645,8 @@ def main() -> None:
     st.title("CapitolWatch — Investment clustering of US politicians")
     st.markdown(
         "Unsupervised learning on 79 US senators' financial disclosures. "
-        "Dataset: 5 268 assets across 35 investment subtypes.  \n"
+        "Dataset: 5 268 assets across 34 investment subtypes "
+        "(\"Uncategorized\" excluded).  \n"
         "Algorithms: K-Means (baseline) · DBSCAN (density) · SOM (topology)."
     )
 

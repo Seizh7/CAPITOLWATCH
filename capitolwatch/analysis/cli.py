@@ -151,7 +151,7 @@ def visualize() -> None:
     typer.secho("\nGenerating visualizations", fg=typer.colors.CYAN, bold=True)
     try:
         run_simple_plots(output_dir=FIGURES_DIR)
-        run_metrics_barplots(output_dir=FIGURES_DIR)
+        run_metrics_barplots(csv_dir=OUTPUT_DIR, figures_dir=FIGURES_DIR)
         run_pca_plots(output_dir=FIGURES_DIR)
         typer.secho(
             f"All plots saved to: {FIGURES_DIR.resolve()}",
@@ -253,7 +253,7 @@ def full_pipeline() -> None:
     )
     try:
         run_simple_plots(output_dir=FIGURES_DIR)
-        run_metrics_barplots(output_dir=FIGURES_DIR)
+        run_metrics_barplots(csv_dir=OUTPUT_DIR, figures_dir=FIGURES_DIR)
         run_pca_plots(output_dir=FIGURES_DIR)
         typer.secho("Visualizations done", fg=typer.colors.GREEN)
     except Exception as exc:

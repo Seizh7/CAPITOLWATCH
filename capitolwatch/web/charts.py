@@ -54,7 +54,6 @@ CLUSTER_COLORS: list[str] = [
 DEFAULT_META_FEATURES: tuple[str, ...] = (
     "total_assets",
     "diversity",
-    "concentration",
 )
 
 

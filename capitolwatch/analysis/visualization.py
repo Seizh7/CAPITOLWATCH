@@ -130,7 +130,7 @@ def plot_centroid_heatmap(
     """
     # Drop engineered numeric meta-features — they are on a different scale
     # and would crush the color range, hiding the subtype signal.
-    META_FEATURES = {"total_assets", "diversity", "concentration"}
+    META_FEATURES = {"total_assets", "diversity"}
     subtype_names = [f for f in feature_names if f not in META_FEATURES]
 
     # Build a DataFrame to leverage groupby easily.
