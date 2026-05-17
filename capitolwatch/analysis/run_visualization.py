@@ -40,7 +40,7 @@ def run_simple_plots(output_dir: Path = OUTPUT_DIR) -> None:
     """
     Generate heatmaps and cluster-size barplots for all 6 experiments.
 
-    No dimensionality reduction involved — these plots work directly on
+    No dimensionality reduction involved : these plots work directly on
     the raw feature values, so they are fast and easy to interpret.
 
     Args:
@@ -67,12 +67,12 @@ def run_simple_plots(output_dir: Path = OUTPUT_DIR) -> None:
             X_raw,
             labels,
             feature_names,
-            title=f"Mean investment per cluster — {label}",
+            title=f"Mean investment per cluster : {label}",
             output_path=output_dir / f"heatmap_{algo}_{feature_type}.png",
         )
         plot_cluster_sizes(
             labels,
-            title=f"Cluster sizes — {label}",
+            title=f"Cluster sizes : {label}",
             output_path=output_dir / f"sizes_{algo}_{feature_type}.png",
         )
 
@@ -111,7 +111,7 @@ def run_metrics_barplots(
         plot_metrics_barplot(
             results_df,
             metric_col=metric,
-            title=f"Comparison — {metric.replace('_', ' ').title()}",
+            title=f"Comparison : {metric.replace('_', ' ').title()}",
             output_path=figures_dir / f"metrics_{metric}.png",
         )
 
@@ -139,7 +139,7 @@ def run_pca_plots(output_dir: Path = OUTPUT_DIR) -> None:
         plot_dimensionality_reduction(
             X,
             labels,
-            title=f"{label} — PCA",
+            title=f"{label} : PCA",
             output_path=output_dir / f"pca_{algo}_{feature_type}.png",
         )
 

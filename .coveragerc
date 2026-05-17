@@ -9,7 +9,7 @@
 source = capitolwatch
 
 omit =
-    # Entry-point scripts — not unit-testable
+    # Entry-point scripts - not unit-testable
     capitolwatch/analysis/run_*.py
     capitolwatch/analysis/run_cluster_analysis.py
     capitolwatch/analysis/run_evaluation.py
@@ -17,16 +17,16 @@ omit =
     capitolwatch/analysis/clustering/run_*.py
     capitolwatch/analysis/cli.py
     capitolwatch/analysis/__main__.py
-    # Plotting library — no logic to test
+    # Plotting library - no logic to test
     capitolwatch/analysis/visualization.py
     capitolwatch/analysis/cluster_analysis.py
-    # Feature store — IO wrapper, not logic
+    # Feature store - IO wrapper, not logic
     capitolwatch/analysis/feature_store.py
-    # Web/Streamlit — requires browser session
+    # Web/Streamlit - requires browser session
     capitolwatch/web/*
-    # Data pipeline — scraping/enrichment
+    # Data pipeline - scraping/enrichment
     capitolwatch/datapipeline/*
-    # Services — covered indirectly via integration tests
+    # Services - covered indirectly via integration tests
     capitolwatch/services/*
 
 [report]

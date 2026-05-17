@@ -19,7 +19,7 @@ def make_normalized_matrix(
     random_state: int = 0
 ) -> np.ndarray:
     """
-    Generate a blob dataset normalized to [0, 1] — required for SOM.
+    Generate a blob dataset normalized to [0, 1] : required for SOM.
 
     Args:
         n_samples (int): Number of samples.

@@ -305,7 +305,7 @@ def print_comparison_table(df: pd.DataFrame) -> None:
         df (pd.DataFrame): Output of run_all_evaluations() or
             build_comparison_table().
     """
-    print("\n=== Internal Metrics — All Experiments ===\n")
+    print("\n=== Internal Metrics : All Experiments ===\n")
     col_fmt = {
         "algo_name": "Algorithm",
         "feature_type": "Feature type",
@@ -335,7 +335,7 @@ def _load_party_labels() -> np.ndarray:
     """
     labels_df = load_features("politician_labels")
     party_map = {"Republican": 0, "Democratic": 1, "Independent": 2}
-    # map returns NaN for unknown values — fill with -1 as a safe fallback
+    # map returns NaN for unknown values : fill with -1 as a safe fallback
     encoded = labels_df["party"].map(party_map).fillna(-1).astype(int)
     return encoded.to_numpy()
 
@@ -399,7 +399,7 @@ def run_external_evaluations(
             ax=ax,
             linewidths=0.5,
         )
-        ax.set_title(f"Clusters vs Parties — {algo} / {feature_type}")
+        ax.set_title(f"Clusters vs Parties : {algo} / {feature_type}")
         ax.set_xlabel("Party")
         ax.set_ylabel("Cluster")
         fig.tight_layout()
@@ -428,7 +428,7 @@ def print_external_comparison_table(df: pd.DataFrame) -> None:
     Args:
         df (pd.DataFrame): Output of run_external_evaluations().
     """
-    print("\n=== External Metrics — All Experiments ===\n")
+    print("\n=== External Metrics : All Experiments ===\n")
     col_fmt = {
         "algo_name": "Algorithm",
         "feature_type": "Feature type",

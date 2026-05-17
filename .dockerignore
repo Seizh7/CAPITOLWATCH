@@ -6,7 +6,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 
-# Data — provided at runtime via Docker volumes
+# Data - provided at runtime via Docker volumes
 data/
 
 # Development tooling and IDE config
@@ -20,7 +20,7 @@ data/
 .github/
 .gitignore
 
-# Secrets — must never enter the image
+# Secrets - must never enter the image
 .env
 .env.*
 

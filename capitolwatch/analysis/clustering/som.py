@@ -175,7 +175,7 @@ class SOMClusterer(BaseClusterer):
         # K-Means will sees one vector per neuron, not one per grid cell
         weights = self._som.get_weights().reshape(self.m * self.n, -1)
 
-        # cluster neuron weight vectors — captures macro topology without
+        # cluster neuron weight vectors : captures macro topology without
         # individual sample noise
         kmeans = KMeans(
             n_clusters=n_clusters, random_state=random_state, n_init=10
@@ -316,7 +316,7 @@ class SOMClusterer(BaseClusterer):
 
         ax.set_xlim(-1, self.n)
         ax.set_ylim(-1, self.m)
-        ax.set_title("SOM Grid — Politician Positions by Cluster")
+        ax.set_title("SOM Grid : Politician Positions by Cluster")
         ax.set_xlabel("Neuron column")
         ax.set_ylabel("Neuron row")
 

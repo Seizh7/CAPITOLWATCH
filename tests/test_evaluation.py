@@ -319,7 +319,7 @@ def make_party_labels(n: int = 79) -> np.ndarray:
     Returns:
         np.ndarray: Integer array of shape (n,).
     """
-    # ~55% R, ~43% D, ~2% I — approximate real distribution
+    # ~55% R, ~43% D, ~2% I : approximate real distribution
     rng = np.random.default_rng(0)
     labels = rng.choice([0, 1, 2], size=n, p=[0.55, 0.43, 0.02])
     return labels.astype(int)
@@ -558,7 +558,7 @@ class TestBuildConfusionMatrix:
         lp = np.array([0, 1, 0, 1])
         names = ["Republican", "Democratic", "Independent"]
         matrix = build_confusion_matrix(lt, lp, names)
-        # Independent column must be absent — only present parties are columns
+        # Independent column must be absent : only present parties are columns
         assert "Independent" not in matrix.columns
         assert "Republican" in matrix.columns
         assert "Democratic" in matrix.columns

@@ -179,7 +179,7 @@ def full_pipeline() -> None:
         bold=True
     )
 
-    # 1 — feature store
+    # 1 : feature store
     typer.secho(
         "\nStep 1/4: Building feature store...",
         fg=typer.colors.BLUE,
@@ -197,7 +197,7 @@ def full_pipeline() -> None:
         )
         raise typer.Exit(code=1)
 
-    # 2 — evaluation
+    # 2 : evaluation
     typer.secho(
         "\nStep 2/4: Running evaluation...", fg=typer.colors.BLUE, bold=True
     )
@@ -222,7 +222,7 @@ def full_pipeline() -> None:
         )
         raise typer.Exit(code=1)
 
-    # 3 — cluster analysis
+    # 3 : cluster analysis
     typer.secho(
         "\nStep 3/4: Running cluster analysis...",
         fg=typer.colors.BLUE,
@@ -240,7 +240,7 @@ def full_pipeline() -> None:
         )
         raise typer.Exit(code=1)
 
-    # 4 — visualizations
+    # 4 : visualizations
     typer.secho(
         "\nStep 4/4: Generating visualizations...",
         fg=typer.colors.BLUE,

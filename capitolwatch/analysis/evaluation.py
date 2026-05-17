@@ -33,7 +33,7 @@ def calculate_silhouette_score(
     X_filtered = X[mask]
     labels_filtered = labels[mask]
 
-    # Guard — return np.nan if fewer than 2 distinct clusters remain
+    # Guard : return np.nan if fewer than 2 distinct clusters remain
     if len(np.unique(labels_filtered)) < 2:
         return np.nan
 
@@ -63,7 +63,7 @@ def evaluate_clustering(
             "freq_baseline", "freq_weighted").
 
     Returns:
-        dict: Keys — algo_name, feature_type, n_clusters, n_outliers,
+        dict: Keys : algo_name, feature_type, n_clusters, n_outliers,
             silhouette.
     """
     # Count the number of outliers (labels == -1)
@@ -152,7 +152,7 @@ def calculate_ari(
     lt_filtered = labels_true[mask]
     lp_filtered = labels_pred[mask]
 
-    # Guard — return np.nan if fewer than 2 unique labels in lp_filtered
+    # Guard : return np.nan if fewer than 2 unique labels in lp_filtered
     if len(np.unique(lp_filtered)) < 2:
         return np.nan
 
@@ -234,7 +234,7 @@ def evaluate_clustering_external(
         feature_type (str): Feature set name (e.g., "freq_baseline").
 
     Returns:
-        dict: Keys — algo_name, feature_type, ari, nmi, v_measure.
+        dict: Keys : algo_name, feature_type, ari, nmi, v_measure.
     """
     ari = calculate_ari(labels_true, labels_pred)
     nmi = calculate_nmi(labels_true, labels_pred)

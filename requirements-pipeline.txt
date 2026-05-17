@@ -1,4 +1,4 @@
-# Datapipeline dependencies — scraping, enrichment, and database management.
+# Datapipeline dependencies - scraping, enrichment, and database management.
 # NOT used by Docker. Install locally before running the datapipeline:
 #
 #   pip install -r requirements.txt

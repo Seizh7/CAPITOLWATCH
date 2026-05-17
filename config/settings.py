@@ -44,7 +44,7 @@ class Config:
             project_root (Optional[Path]): Repository root path.
         """
         # Accept an externally resolved root to avoid recomputing it when
-        # __init__.py has already done so — falls back to self-resolution.
+        # __init__.py has already done so : falls back to self-resolution.
         self.project_root = (
             project_root or Path(__file__).resolve().parent.parent
         )

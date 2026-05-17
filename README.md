@@ -3,11 +3,11 @@
 [![CI](https://github.com/Seizh7/CAPITOLWATCH/actions/workflows/ci.yml/badge.svg)](https://github.com/Seizh7/CAPITOLWATCH/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
 
-Unsupervised clustering of US senators' financial investment portfolios (2023 annual disclosures). Compares three algorithms — K-Means, DBSCAN, and SOM — across two feature representations (frequency counts and value-weighted vectors).
+Unsupervised clustering of US senators' financial investment portfolios (2023 annual disclosures). Compares three algorithms (K-Means, DBSCAN, and SOM) across two feature representations (frequency counts and value-weighted vectors).
 
 ---
 
-## Quick start — Docker
+## Quick start - Docker
 
 > The SQLite database and pre-computed feature store are required before starting the container. See [Development](#development) if you need to rebuild them from scratch.
 
@@ -32,8 +32,8 @@ The Streamlit interface exposes five tabs:
 
 | Tab | Content |
 |-----|---------|
-| **Comparison** | Internal metrics (Silhouette) across all 6 experiments — table + bar charts |
-| **Best result** | DBSCAN + `freq_weighted` — PCA scatter plot, centroid heatmap, outlier list |
+| **Comparison** | Internal metrics (Silhouette) across all 6 experiments (table + bar charts)|
+| **Best result** | DBSCAN + `freq_weighted` (PCA scatter plot, centroid heatmap, outlier list) |
 | **SOM** | U-Matrix and political map |
 | **External** | ARI / NMI / V-Measure against party labels for each experiment |
 | **Sector analysis** | DBSCAN clustering on economic sector vectors |
@@ -77,7 +77,7 @@ Run the dashboard locally (no Docker):
 streamlit run capitolwatch/web/app.py
 ```
 
-### Pipeline — rebuild from raw data
+### Pipeline - rebuild from raw data
 
 The data collection pipeline scrapes the US Senate website and populates a SQLite database. This step is only needed if you want to collect data for a different year or rebuild the database.
 
@@ -105,4 +105,4 @@ pytest
 
 ## License
 
-Copyright 2026 Seizh7 — Licensed under the [Apache License, Version 2.0](LICENSE).
+Copyright 2026 Seizh7 - Licensed under the [Apache License, Version 2.0](LICENSE).

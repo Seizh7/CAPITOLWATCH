@@ -1,4 +1,4 @@
-# Runtime dependencies — dashboard (Streamlit) and analysis modules.
+# Runtime dependencies - dashboard (Streamlit) and analysis modules.
 # Used by Docker: pip install -r requirements.txt
 
 # Config

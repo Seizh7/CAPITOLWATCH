@@ -128,7 +128,7 @@ def plot_centroid_heatmap(
         output_path (Optional[Path]): Save path. Displays
             interactively if None.
     """
-    # Drop engineered numeric meta-features — they are on a different scale
+    # Drop engineered numeric meta-features : they are on a different scale
     # and would crush the color range, hiding the subtype signal.
     META_FEATURES = {"total_assets", "diversity"}
     subtype_names = [f for f in feature_names if f not in META_FEATURES]
@@ -137,7 +137,7 @@ def plot_centroid_heatmap(
     df = pd.DataFrame(feature_matrix, columns=feature_names)
     df["_label"] = labels
 
-    # Exclude outliers — their "centroid" is not meaningful.
+    # Exclude outliers : their "centroid" is not meaningful.
     df = df[df["_label"] != -1]
 
     # Compute mean of each subtype column per cluster.

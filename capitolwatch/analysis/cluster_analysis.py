@@ -205,7 +205,7 @@ def generate_cluster_report(
     lines = []
 
     # Header
-    lines.append(f"# Cluster report — {algo_name} / {feature_type}")
+    lines.append(f"# Cluster report - {algo_name} / {feature_type}")
     lines.append("")
     lines.append(
         f"Algorithm: {algo_name.upper()} | "
@@ -214,7 +214,7 @@ def generate_cluster_report(
     )
     lines.append("")
 
-    # Summary table — one row per cluster
+    # Summary table - one row per cluster
     lines.append("## Summary")
     lines.append("")
     lines.append(
@@ -227,7 +227,7 @@ def generate_cluster_report(
     )
     for p in profiles:
         name = _suggest_cluster_name(p)
-        top_sub = p.top_subtypes[0][0] if p.top_subtypes else "—"
+        top_sub = p.top_subtypes[0][0] if p.top_subtypes else "-"
         label = "Outliers" if p.cluster_id == -1 else str(p.cluster_id)
         lines.append(
             f"| {label} | {name} | {p.size} | "
@@ -242,7 +242,7 @@ def generate_cluster_report(
         label = "Outliers" if p.cluster_id == -1 else f"Cluster {p.cluster_id}"
         suggested = _suggest_cluster_name(p)
 
-        lines.append(f"## {label} — {suggested}")
+        lines.append(f"## {label} - {suggested}")
         lines.append("")
         lines.append(f"Size: {p.size} politicians")
         lines.append("")
@@ -370,7 +370,7 @@ def run_analysis(
     # 4. Print a compact summary to stdout
     for p in profiles:
         label = "outliers" if p.cluster_id == -1 else f"cluster {p.cluster_id}"
-        top = p.top_subtypes[0][0] if p.top_subtypes else "—"
+        top = p.top_subtypes[0][0] if p.top_subtypes else "-"
         print(f"    {label:12s} | size={p.size:3d} | top_subtype={top!r}")
 
     return profiles

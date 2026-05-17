@@ -154,7 +154,7 @@ def scatter_pca_plotly(
         X_2d,
         labels,
         hover_texts,
-        title=title or "PCA 2D — clustering results",
+        title=title or "PCA 2D - clustering results",
         x_label="PCA Component 1",
         y_label="PCA Component 2",
     )
@@ -445,7 +445,7 @@ def som_map_plotly(
 
 
 if __name__ == "__main__":
-    # Quick test with synthetic data — no real dataset required.
+    # Quick test with synthetic data - no real dataset required.
     import numpy as np
     from sklearn.datasets import make_blobs
 

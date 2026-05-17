@@ -235,14 +235,13 @@ def _tab_comparison(internal_df: pd.DataFrame) -> None:
     )
 
     st.info(
-        "**K-Means silhouette artefact** — K-Means scores (0.77 / 0.70) are "
-        "artificially inflated: the algorithm always selects K=2 and isolates "
-        "Rick Scott (455 assets, maximum in the dataset) as a singleton "
-        "cluster. "
-        "A single-point cluster has silhouette ≈ 1 by definition, which makes "
-        "the global score misleadingly high. "
-        "DBSCAN correctly assigns him label -1 (outlier) without "
-        "polluting the other clusters."
+        "**Reading the scores** : K-Means shows the highest silhouette (0.77 and 0.70) "
+        "but this needs context. It found only 2 clusters for both feature sets and placed "
+        "Rick Scott alone in one of them, as his 455 assets make him an extreme outlier in the data. "
+        "A single-point cluster always gets silhouette = 1, which pulls the average up artificially. "
+        "DBSCAN's score (0.58) is lower but more reliable: it found 3 real clusters and flagged "
+        "13 politicians as outliers (visible in the n_outliers column), "
+        "without letting them modify the overall score."
     )
 
     st.divider()
@@ -251,7 +250,7 @@ def _tab_comparison(internal_df: pd.DataFrame) -> None:
         barplot_metrics_plotly(
             internal_df,
             metric_col="silhouette",
-            title="Silhouette — 6 experiments",
+            title="Silhouette - 6 experiments",
         ),
         use_container_width=True,
     )
@@ -259,7 +258,7 @@ def _tab_comparison(internal_df: pd.DataFrame) -> None:
 
 def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     """
-    Render the "Best result — DBSCAN" tab.
+    Render the "Best result - DBSCAN" tab.
 
     Shows PCA / t-SNE scatters, a centroid heatmap, and the outlier table
     for DBSCAN + freq_weighted (best silhouette among meaningful results).
@@ -267,7 +266,7 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     Args:
         politician_metadata (pd.DataFrame): Politician names and parties.
     """
-    st.header("Best result — DBSCAN + freq_weighted")
+    st.header("Best result - DBSCAN + freq_weighted")
     st.caption(
         "Best configuration: cosine metric, eps=0.5, min_samples=3. "
         "3 clusters, 13 outliers (16% noise ratio). "
@@ -284,7 +283,7 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     st.subheader("PCA 2D")
     st.plotly_chart(
         scatter_pca_plotly(
-            X, labels, hover_texts, title="DBSCAN + freq_weighted — PCA"
+            X, labels, hover_texts, title="DBSCAN + freq_weighted - PCA"
         ),
         use_container_width=True,
     )
@@ -295,7 +294,7 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
             raw_matrix.to_numpy(),
             labels,
             feature_names,
-            title="DBSCAN + freq_weighted — cluster profiles",
+            title="DBSCAN + freq_weighted - cluster profiles",
         ),
         use_container_width=True,
     )
@@ -310,23 +309,21 @@ def _tab_best_result(politician_metadata: pd.DataFrame) -> None:
     outlier_df.index += 1
     st.dataframe(outlier_df, use_container_width=True)
 
-    # Party breakdown of the 13 outliers
+    # Party profile of the 13 outliers
     if not outlier_df.empty:
         party_counts = outlier_df["party"].value_counts()
         rep = party_counts.get("Republican", 0)
         dem = party_counts.get("Democratic", 0)
         ind = party_counts.get("Independent", 0)
         st.info(
-            f"**Outlier profile** — {rep} Republicans, {dem} Democrats"
+            f"**Outlier profile:** {rep} Republicans, {dem} Democrats"
             + (f", {ind} Independents" if ind else "") + ". "
-            "These 13 politicians are not outliers because of their party "
-            "affiliation, but because of the **scale and composition** of "
-            "their portfolios: they invest in niche asset classes "
-            "(Municipal Securities, LLCs, alternative funds) that are "
-            "statistically rare in the dataset. "
-            "Rick Scott stands out with 455 assets — 6x the average — "
-            "and is the only politician unanimously flagged by all three "
-            "algorithms (K-Means, DBSCAN, SOM)."
+            "These 13 politicians were flagged as outliers not because of their party, "
+            "but because of the **size and composition** of their portfolios. "
+            "They hold asset types that are rare in the dataset "
+            "(Municipal Securities, LLCs, alternative funds). "
+            "Rick Scott is the most extreme case with 455 assets (6x the average) "
+            "and is the only politician flagged as an outlier by all three algorithms."
         )
 
 
@@ -364,16 +361,16 @@ def _tab_som(politician_metadata: pd.DataFrame) -> None:
             bmu_coords,
             hover_texts,
             party_colors,
-            title=f"SOM map — {feature_type}",
+            title=f"SOM map - {feature_type}",
         ),
         use_container_width=True,
     )
 
     st.caption(
-        "Grid 7x7 = 49 neurons for 79 politicians. "
-        "Rule of thumb: 5*sqrt(N) = 5*sqrt(79) ≈ 44 neurons. "
-        "Dark cells = cluster cores (low distance). "
-        "Light cells = cluster boundaries."
+        "7x7 grid = 49 neurons for 79 politicians. "
+        "Recommended size: 5xsqrt(N) = 5xsqrt(79) ≈ 44 neurons. "
+        "Dark cells = dense zones (cluster cores). "
+        "Light cells = transition zones between clusters."
     )
 
 
@@ -392,10 +389,10 @@ def _tab_external(
         external_df (pd.DataFrame): External metrics CSV.
         internal_df (pd.DataFrame): Internal metrics CSV (kept for reference).
     """
-    st.header("External metrics — party labels as ground truth")
+    st.header("External metrics: party labels as ground truth")
     st.caption(
-        "These metrics measure whether clusters align with political parties. "
-        "Values near 0 indicate independence between clusters and party."
+        "These metrics compare the clusters found by each algorithm against party labels. "
+        "A value close to 0 means the clusters have nothing to do with political party membership."
     )
 
     # --- Metrics table ---
@@ -417,7 +414,7 @@ def _tab_external(
         ext_plot["algo_name"] + " / " + ext_plot["feature_type"]
     )
 
-    st.subheader("Barplots — external metrics")
+    st.subheader("External metrics barplots")
     ext_cols = st.columns(3)
     for col, metric in zip(ext_cols, ["ari", "nmi", "v_measure"]):
         col.plotly_chart(
@@ -439,7 +436,7 @@ def _tab_external(
         heatmap_confusion_plotly,
     )
 
-    st.subheader("Confusion matrices — cluster x party")
+    st.subheader("Confusion matrices: cluster vs party")
 
     # Map party strings to integer codes expected by build_confusion_matrix()
     _PARTY_ORDER = ["Republican", "Democratic", "Independent"]
@@ -500,28 +497,22 @@ def _tab_external(
 
     st.divider()
 
-    # --- Scientific interpretation ---
-    st.subheader("Scientific interpretation")
+    # --- Interpretation ---
+    st.subheader("Interpretation")
     st.markdown(
-        "**Clusters are independent of political party affiliation.** "
-        "All ARI values are close to 0 (from -0.036 to +0.012), meaning "
-        "cluster assignments are no better than random at predicting party "
-        "membership. NMI and V-Measure confirm this: the highest NMI is "
-        "0.097 (DBSCAN + freq_weighted), indicating less than 10% of shared "
-        "information between clusters and parties.\n\n"
-        "**This is a scientifically meaningful result, not a failure.** "
-        "It shows that investment behaviour cuts across party lines: "
-        "Republicans and Democrats alike hold mutual funds, stocks, and ETFs "
-        "in similar proportions. The clusters instead reflect "
-        "**portfolio scale and asset type** — the kind of financial "
-        "instruments a senator holds and their monetary weight — rather than "
-        "ideological differences.\n\n"
-        "**Outliers reinforce this conclusion.** "
+        "**The clusters do not follow party lines.** "
+        "All ARI values are close to 0 (between -0.036 and +0.012), which means "
+        "knowing which cluster a senator belongs to does not help predict their party. "
+        "NMI and V-Measure confirm this: the highest NMI is 0.097 (DBSCAN + freq_weighted), "
+        "meaning clusters and parties share less than 10% of their information.\n\n"
+        "It shows that investment behaviour is not tied to party: Republicans and Democrats "
+        "hold the same types of assets (mutual funds, stocks, ETFs) in similar proportions. "
+        "The clusters reflect **portfolio size and asset type** rather than political ideology.\n\n"
+        "**The outliers confirm this.** "
         "The 13 DBSCAN outliers include both Republicans and Democrats, "
-        "united by unusually large or atypical portfolios, not by party. "
-        "Rick Scott (Republican, 455 assets) is the most extreme case, but "
-        "Mark R. Warner (Democrat) and Ron Wyden (Democrat) also appear, "
-        "confirming that the pattern is bipartisan."
+        "grouped together because of unusually large or atypical portfolios, not because of party. "
+        "Rick Scott (Republican, 455 assets) is the clearest case, but Mark R. Warner "
+        "and Ron Wyden (both Democrats) also appear, showing the pattern cuts across party lines."
     )
 
 
@@ -538,12 +529,12 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
     Args:
         politician_metadata (pd.DataFrame): Politician names and parties.
     """
-    st.header("Sector analysis — DBSCAN on economic sectors")
+    st.header("Sector analysis - DBSCAN on economic sectors")
     st.caption(
-        "Feature set: sector_baseline — 11 economic sectors (Technology, "
+        "Feature set: sector_baseline - 11 economic sectors (Technology, "
         "Finance, Healthcare…) + 3 numeric features. "
-        "82.6% of assets have no sector (\"Uncategorized\"), which is "
-        "excluded from the feature dimensions to preserve signal."
+        "82.6% of assets have no sector tag (\"Uncategorized\"), so this column "
+        "was removed to avoid it dominating the feature vectors."
     )
 
     with st.spinner("Running DBSCAN on sector_baseline..."):
@@ -554,13 +545,13 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
     hover_texts = _build_hover_texts(politician_metadata, labels)
 
     # --- PCA 2D scatter ---
-    st.subheader("PCA 2D — sector clusters")
+    st.subheader("PCA 2D: sector clusters")
     st.plotly_chart(
         scatter_pca_plotly(
             X,
             labels,
             hover_texts,
-            title="DBSCAN + sector_baseline — PCA",
+            title="DBSCAN + sector_baseline - PCA",
         ),
         use_container_width=True,
     )
@@ -572,7 +563,7 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
             raw_sector_matrix.to_numpy(),
             labels,
             sector_feature_names,
-            title="DBSCAN + sector_baseline — cluster profiles",
+            title="DBSCAN + sector_baseline - cluster profiles",
         ),
         use_container_width=True,
     )
@@ -596,12 +587,11 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
         dem = party_counts.get("Democratic", 0)
         ind = party_counts.get("Independent", 0)
         st.info(
-            f"**{len(outlier_df)} sector outlier(s)** — "
+            f"**{len(outlier_df)} sector outlier(s):** "
             f"{rep} Republicans, {dem} Democrats"
             + (f", {ind} Independents" if ind else "") + ". "
-            "These politicians have sector exposure patterns that are too "
-            "sparse or atypical to form dense neighbourhoods in cosine "
-            "space."
+            "These politicians have sector investment patterns that are too unusual "
+            "or sparse to be grouped with others."
         )
 
     st.divider()
@@ -609,24 +599,20 @@ def _tab_sector(politician_metadata: pd.DataFrame) -> None:
     # --- Explanatory note ---
     st.subheader("Sector analysis vs subtype analysis")
     st.markdown(
-        "**Granularity difference** — The main analysis uses `subtype` "
-        "(instrument type: Mutual Fund, Stock, ETF, Bond…), which captures "
+        "**Two different views of the same data.** The main analysis uses `subtype` "
+        "(the type of financial instrument: Mutual Fund, Stock, ETF, Bond…), which shows "
         "*how* politicians invest. "
-        "This tab uses `sector` (economic sector: Technology, Finance, "
-        "Healthcare…), which captures *where* they invest.\n\n"
-        "**Coverage caveat** — Only 17.4% of assets have a sector tag "
-        "(11 sectors, sourced from product metadata). "
-        "The remaining 82.6% fall under \"Uncategorized\", which is excluded "
-        "from the feature dimensions to avoid a dominant zero-signal column. "
-        "This means sector vectors are significantly sparser than subtype "
-        "vectors (34 subtypes, ~98% coverage), and cluster structure may be "
-        "less stable.\n\n"
-        "**Interpretation** — Clusters here reflect *sector specialisation*: "
-        "politicians who concentrate their tagged assets in one or two "
-        "sectors (e.g., Technology or Finance) separate from those with "
-        "diversified or no tagged holdings. "
-        "Use this tab as a complementary lens, not a replacement for the "
-        "subtype-based analysis."
+        "This tab uses `sector` (the economic sector: Technology, Finance, Healthcare…), "
+        "which shows *where* they invest.\n\n"
+        "**Coverage issue.** Only 17.4% of assets have a sector tag (11 sectors). "
+        "The remaining 82.6% are labelled \"Uncategorized\" and were excluded from the "
+        "feature vectors to avoid introducing a column with almost no useful signal. "
+        "As a result, sector vectors are much sparser than subtype vectors "
+        "(34 subtypes, ~98% coverage), and cluster quality may be lower.\n\n"
+        "**Reading this tab.** The clusters here show *sector concentration*: "
+        "politicians who put most of their tagged assets into one or two sectors "
+        "(e.g., Technology or Finance) are separated from those with more diverse "
+        "or mostly untagged holdings. "
     )
 
 
@@ -637,17 +623,16 @@ def main() -> None:
     # Configure the Streamlit page and render all four tabs.
 
     st.set_page_config(
-        page_title="CapitolWatch — Clustering",
+        page_title="CapitolWatch - Clustering",
         layout="wide",
         initial_sidebar_state="collapsed",
     )
 
-    st.title("CapitolWatch — Investment clustering of US politicians")
+    st.title("CapitolWatch - Investment clustering of US politicians")
     st.markdown(
-        "Unsupervised learning on 79 US senators' financial disclosures. "
-        "Dataset: 5 268 assets across 34 investment subtypes "
-        "(\"Uncategorized\" excluded).  \n"
-        "Algorithms: K-Means (baseline) · DBSCAN (density) · SOM (topology)."
+        "Unsupervised learning applied to 79 US senators' financial disclosures. "
+        "The dataset contains 5,268 assets across 34 investment subtypes. "
+        "Three algorithms are compared: K-Means, DBSCAN, and SOM (Self-Organizing Map)."
     )
 
     internal_df, external_df = _load_evaluation_data()
@@ -656,7 +641,7 @@ def main() -> None:
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
             "Comparison",
-            "Best result — DBSCAN",
+            "Best result - DBSCAN",
             "SOM",
             "External metrics",
             "Sector analysis",
