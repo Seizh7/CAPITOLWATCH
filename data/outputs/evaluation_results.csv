@@ -2,6 +2,6 @@ algo_name,feature_type,n_clusters,n_outliers,silhouette
 kmeans,freq_weighted,2,0,0.7733235287439003
 kmeans,freq_baseline,2,0,0.6958406707751487
 dbscan,freq_weighted,3,13,0.5794750950760323
-som,freq_weighted,3,0,0.5244461992139127
+som,freq_weighted,4,0,0.4995498740998194
 dbscan,freq_baseline,2,45,0.47328660410788503
-som,freq_baseline,3,0,0.3101347548754825
+som,freq_baseline,4,0,0.18628260988159245
