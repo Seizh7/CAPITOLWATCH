@@ -178,7 +178,7 @@ def _get_som_labels(
     feature_type: str,
     m: int = 7,
     n: int = 7,
-    n_clusters: int = 3,
+    n_clusters: int = 4,
     n_iterations: int = 1000,
 ) -> tuple:
     """

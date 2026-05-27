@@ -115,7 +115,7 @@ def _get_som_full_results(
     feature_type: str,
     m: int = 7,
     n: int = 7,
-    n_clusters: int = 3,
+    n_clusters: int = 4,
     n_iterations: int = 1000,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, list]:
     """

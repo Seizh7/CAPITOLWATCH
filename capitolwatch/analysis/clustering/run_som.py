@@ -84,7 +84,7 @@ def _extract_and_visualize(
     X: np.ndarray,
     feature_type: str,
     politician_labels,
-    n_clusters: int = 3,
+    n_clusters: int = 4,
 ) -> None:
     """
     Extract clusters from trained SOM and save both visualizations.

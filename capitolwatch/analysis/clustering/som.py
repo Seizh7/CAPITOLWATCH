@@ -150,7 +150,7 @@ class SOMClusterer(BaseClusterer):
 
     def extract_clusters(
         self,
-        n_clusters: int = 3,
+        n_clusters: int = 4,
         random_state: int = 42,
     ) -> np.ndarray:
         """
