@@ -103,6 +103,30 @@ pytest
 
 ---
 
+## Dependencies
+
+All runtime dependencies are pinned in [`requirements.txt`](requirements.txt). The data pipeline additionally requires [`requirements-pipeline.txt`](requirements-pipeline.txt).
+
+| Library | Version | Role |
+|---------|---------|------|
+| [scikit-learn](https://scikit-learn.org/) | 1.6.1 | K-Means, DBSCAN, metrics (Silhouette, ARI, NMI) |
+| [MiniSom](https://github.com/JustGlowing/minisom) | 2.3.5 | Self-Organizing Map (SOM) |
+| [numpy](https://numpy.org/) | 1.26.4 | Numerical arrays and matrix operations |
+| [pandas](https://pandas.pydata.org/) | 2.3.2 | Tabular data manipulation |
+| [matplotlib](https://matplotlib.org/) | 3.9.4 | Static figures (PCA, heatmaps, barplots) |
+| [seaborn](https://seaborn.pydata.org/) | 0.13.2 | Statistical visualisation styling |
+| [plotly](https://plotly.com/python/) | 6.3.0 | Interactive charts in the dashboard |
+| [streamlit](https://streamlit.io/) | 1.50.0 | Web dashboard interface |
+| [joblib](https://joblib.readthedocs.io/) | 1.5.1 | Feature store serialisation (`.pkl` files) |
+| [python-dotenv](https://saurabh-kumar.com/python-dotenv/) | 1.1.1 | Environment variable loading |
+| [selenium](https://www.selenium.dev/) | 4.34.2 | Headless browser scraping *(pipeline only)* |
+| [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/) | 4.13.4 | HTML report parsing *(pipeline only)* |
+| [requests](https://requests.readthedocs.io/) | 2.32.5 | HTTP calls to Congress and OpenFIGI APIs *(pipeline only)* |
+| [yfinance](https://ranaroussi.github.io/yfinance/) | 0.2.65 | Financial product enrichment *(pipeline only)* |
+| [typer](https://typer.tiangolo.com/) | 0.21.1 | CLI interface for both modules *(pipeline only)* |
+
+---
+
 ## License
 
 Copyright 2026 Seizh7 - Licensed under the [Apache License, Version 2.0](LICENSE).
