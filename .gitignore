@@ -9,6 +9,9 @@ data/*
 !data/capitolwatch.db
 !data/manual_overrides.json
 !data/outputs/
+!data/figures/
+!data/figures/cluster_profiles/
+!data/figures/cluster_profiles/**
 
 .env
 .github/copilot-instructions.md
