@@ -687,7 +687,6 @@ Ces dépendances sont nécessaires uniquement pour exécuter le pipeline de coll
 | `typer` | 0.21.1 | MIT | Construction des CLI | API déclarative basée sur les annotations de type Python ; génère automatiquement l'aide `--help` |
 | `requests` | 2.32.5 | Apache-2.0 | Requêtes HTTP vers l'API Congress.gov et OpenFIGI | Standard HTTP Python ; gestion des sessions, timeouts et retry |
 | `yfinance` | 0.2.65 | Apache-2.0 | Enrichissement des produits (secteur, industrie, ticker) | Accès gratuit aux données Yahoo Finance ; alternative légère aux APIs financières payantes |
-| `boto3` | 1.40.24 | Apache-2.0 | Client AWS SDK (stockage optionnel) | Présent pour un éventuel archivage des rapports HTML dans S3 |
 | `NAMEMATCHING` | HEAD | Apache-2.0 | Correspondance des noms de politiciens | Module interne (dépôt Seizh7/NAMEMATCHING) ; gère les accents, abréviations et variantes orthographiques. Le code se replie sur une similarité de chaînes basique si la bibliothèque est absente |
 
 ---

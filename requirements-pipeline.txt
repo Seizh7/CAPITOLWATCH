@@ -17,7 +17,6 @@ typer==0.21.1
 # Data enrichment (financial APIs)
 requests==2.32.5
 yfinance==0.2.65
-boto3==1.40.24
 
 # Optional: improves politician name matching accuracy.
 # The code falls back to basic string similarity if this package is absent.

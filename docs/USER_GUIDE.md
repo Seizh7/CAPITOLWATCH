@@ -676,7 +676,6 @@ Toutes les dépendances sont épinglées à une version précise dans [`requirem
 | [requests](https://requests.readthedocs.io/) | 2.32.5 | Appels HTTP vers les APIs Congress.gov et OpenFIGI |
 | [yfinance](https://ranaroussi.github.io/yfinance/) | 0.2.65 | Enrichissement des produits financiers |
 | [typer](https://typer.tiangolo.com/) | 0.21.1 | Interface CLI des deux modules |
-| [boto3](https://boto3.amazonaws.com/v1/documentation/api/latest/index.html) | 1.40.24 | Accès aux services AWS *(optionnel)* |
 
 ### Dépendances internes
 
