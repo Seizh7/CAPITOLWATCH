@@ -11,6 +11,17 @@ Unsupervised clustering of US senators' financial investment portfolios (2023 an
 
 > The SQLite database and pre-computed feature store are required before starting the container. See [Development](#development) if you need to rebuild them from scratch.
 
+The easiest way to build and launch the application is to use the provided automated startup script:
+
+```bash
+# Make the script executable (if needed)
+chmod +x run.sh
+
+# Launch the automated environment check, build, and container startup
+./run.sh
+
+Alternatively, you can run the Docker commands manually:
+
 ```bash
 # Build the image
 docker compose build
@@ -52,6 +63,7 @@ config/                # Settings (db path, feature store path…)
 data/
 ├── capitolwatch.db    # SQLite database
 └── feature_store/     # Pre-computed feature matrices (.pkl)
+run.sh                 # Docker automation & environment check script
 ```
 
 ---
