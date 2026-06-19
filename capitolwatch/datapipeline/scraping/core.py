@@ -11,6 +11,7 @@ independent of the CLI interface.
 """
 
 from pathlib import Path
+from typing import Any, Optional
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -26,10 +27,10 @@ from capitolwatch.datapipeline.scraping.downloader import download_report
 
 def run_scraping(
     year: str,
-    start_date: str = None,
-    end_date: str = None,
-    output_dir: Path = None,
-    config: object = None
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    output_dir: Optional[Path] = None,
+    config: Optional[Any] = None
 ):
     """
     Execute the scraping workflow.
@@ -48,18 +49,26 @@ def run_scraping(
         from config import CONFIG
         config = CONFIG
 
+    # Create a config with the target year to get correct date ranges
+    from config.settings import Config
+    config = Config(year=year, project_root=config.project_root)
+
     # Use config defaults if not provided
     start_date = start_date or config.start_date
     end_date = end_date or config.end_date
-    output_dir = output_dir or config.output_folder
+    if output_dir is None:
+        output_dir = Path(config.output_folder)
+    else:
+        output_dir = Path(output_dir)
 
     # Create output directory
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Print header
     print("CAPITOLWATCH - Senate Report Scraper")
-    print(f"Date range: {start_date} to {end_date}")
-    print(f"Target year: {year}")
+    print(f"Fiscal year target: {year}")
+    print(f"Search calendar year: {config.search_year}")
+    print(f"Date range (search window): {start_date} to {end_date}")
     print(f"Output directory: {output_dir}")
     print()
 
@@ -81,7 +90,10 @@ def run_scraping(
         wait.until(EC.presence_of_element_located((By.ID, "filedReports")))
 
         # Collect all report links
-        print(f"Collecting report links for year {year}...")
+        print(
+            "Collecting report links for "
+            f"fiscal year {year} (Annual Report for CY {year})..."
+        )
         all_report_links = get_all_links(driver, year)
         print(f"Found {len(all_report_links)} total reports")
         print()

@@ -26,7 +26,11 @@ def main(
         ...,
         "--year",
         "-y",
-        help="Target year for annual reports (e.g., 2023)"
+        help=(
+            "Fiscal year for annual reports (e.g., 2023). "
+            "Default search window uses calendar year N+1 "
+            "(01/01/N+1 to 12/31/N+1)."
+        )
     ),
     start: Optional[str] = typer.Option(
         None,
