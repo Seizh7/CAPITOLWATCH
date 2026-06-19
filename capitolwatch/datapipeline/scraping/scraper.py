@@ -45,6 +45,13 @@ def submit_search_form(driver, start_date, end_date):
     """
     # User agreement must be accepted before access to search.
     driver.get("https://efdsearch.senate.gov/search/")
+    if "Access Denied" in driver.title:
+        raise RuntimeError(
+            "The Senate eFD site rejected this browser session before the "
+            "search form loaded. This host is being blocked by the site or "
+            "its anti-bot checks."
+        )
+
     try:
         # Find the agreement checkbox and activate it
         agree_checkbox = WebDriverWait(driver, 5).until(
